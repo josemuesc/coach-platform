@@ -25,7 +25,11 @@ public class SchedulingRuleException extends RuntimeException {
         EVENT_ALREADY_STARTED,
         CAPACITY_NOT_CONFIGURABLE,
         INVALID_CAPACITY,
-        CAPACITY_BELOW_OCCUPANCY
+        CAPACITY_BELOW_OCCUPANCY,
+        INVALID_QR,
+        CONFIRMATION_WINDOW_CLOSED,
+        QR_NOT_OPEN_YET,
+        QR_WINDOW_CLOSED
     }
 
     private final Code code;

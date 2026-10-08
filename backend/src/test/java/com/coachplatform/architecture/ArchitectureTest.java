@@ -170,7 +170,7 @@ class ArchitectureTest {
     @Test
     void domainOnlyDependsOnTheJdkItselfAndApiTypes() {
         classes().that().resideInAPackage("..domain..")
-                .should().onlyDependOnClassesThat().resideInAnyPackage("java..", ROOT + "..domain..", ROOT + "..api..")
+                .should().onlyDependOnClassesThat().resideInAnyPackage("java..", "javax.crypto..", ROOT + "..domain..", ROOT + "..api..")
                 .allowEmptyShould(true)
                 .check(classes);
     }

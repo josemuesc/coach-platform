@@ -1,6 +1,7 @@
 package com.coachplatform.scheduling;
 
 import com.coachplatform.scheduling.api.AttendanceStatus;
+import com.coachplatform.scheduling.api.ConfirmationMethod;
 import com.coachplatform.tenant.TenantScopedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -66,6 +67,14 @@ class SessionAttendance extends TenantScopedEntity {
     @Column(name = "override_by")
     private UUID overrideBy;
 
+    /** Permanent once set (also enforced by a database trigger). Never changes the status nor the cycle count by itself. */
+    @Column(name = "student_confirmed_at")
+    private Instant studentConfirmedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "student_confirmation_method")
+    private ConfirmationMethod studentConfirmationMethod;
+
     @Column(name = "created_by", nullable = false, updatable = false)
     private UUID createdBy;
 
@@ -91,6 +100,9 @@ class SessionAttendance extends TenantScopedEntity {
     UUID getRescheduledFrom() { return rescheduledFrom; }
     String getCancelReason() { return cancelReason; }
     boolean isOverride() { return override; }
+    boolean isConfirmed() { return studentConfirmedAt != null; }
+    Instant getStudentConfirmedAt() { return studentConfirmedAt; }
+    ConfirmationMethod getStudentConfirmationMethod() { return studentConfirmationMethod; }
     String getOverrideReason() { return overrideReason; }
 
     void cancel(AttendanceStatus newStatus, UUID by, String reason, Instant now) {
@@ -104,6 +116,14 @@ class SessionAttendance extends TenantScopedEntity {
         this.status = newStatus;
         this.markedBy = by;
         this.markedAt = now;
+    }
+
+    /** Records the student's confirmation. Does nothing if there already is one (it can never be replaced). */
+    void confirm(ConfirmationMethod method, Instant now) {
+        if (studentConfirmedAt == null) {
+            this.studentConfirmedAt = now;
+            this.studentConfirmationMethod = method;
+        }
     }
 
     void moveToCycle(UUID newCycleId) {

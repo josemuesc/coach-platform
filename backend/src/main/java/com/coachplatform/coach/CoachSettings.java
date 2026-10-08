@@ -33,6 +33,21 @@ public class CoachSettings {
     @Column(name = "default_group_capacity", nullable = false)
     private int defaultGroupCapacity = 4;
 
+    @Column(name = "confirmation_window_hours", nullable = false)
+    private int confirmationWindowHours = 72;
+
+    @Column(name = "qr_open_minutes_before", nullable = false)
+    private int qrOpenMinutesBefore = 15;
+
+    @Column(name = "qr_close_hours_after_end", nullable = false)
+    private int qrCloseHoursAfterEnd = 2;
+
+    @Column(name = "gym_consent_confirmed", nullable = false)
+    private boolean gymConsentConfirmed;
+
+    @Column(name = "gym_consent_confirmed_at")
+    private Instant gymConsentConfirmedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -50,6 +65,11 @@ public class CoachSettings {
     public int getMaxExtensionDays() { return maxExtensionDays; }
     public int getClassDurationMinutes() { return classDurationMinutes; }
     public int getDefaultGroupCapacity() { return defaultGroupCapacity; }
+    public int getConfirmationWindowHours() { return confirmationWindowHours; }
+    public int getQrOpenMinutesBefore() { return qrOpenMinutesBefore; }
+    public int getQrCloseHoursAfterEnd() { return qrCloseHoursAfterEnd; }
+    public boolean isGymConsentConfirmed() { return gymConsentConfirmed; }
+    public Instant getGymConsentConfirmedAt() { return gymConsentConfirmedAt; }
 
     public void update(int cancelWindowHours, int classDurationMinutes, int expiringSoonDays, int expiringSoonClasses,
                        int maxExtensionDays, int defaultGroupCapacity) {

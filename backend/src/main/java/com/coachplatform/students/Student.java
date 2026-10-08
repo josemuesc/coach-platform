@@ -7,7 +7,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import com.coachplatform.students.domain.GuardianData;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -33,6 +35,23 @@ class Student extends TenantScopedEntity {
     @Column(nullable = false)
     private boolean active = true;
 
+    private String goal;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @Column(name = "guardian_name")
+    private String guardianName;
+
+    @Column(name = "guardian_relationship")
+    private String guardianRelationship;
+
+    @Column(name = "guardian_phone")
+    private String guardianPhone;
+
+    @Column(name = "guardian_email")
+    private String guardianEmail;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -52,6 +71,21 @@ class Student extends TenantScopedEntity {
     UUID getUserId() { return userId; }
     boolean isActive() { return active; }
     boolean hasAccount() { return userId != null; }
+    String getGoal() { return goal; }
+    LocalDate getBirthDate() { return birthDate; }
+
+    GuardianData guardian() {
+        return new GuardianData(guardianName, guardianRelationship, guardianPhone, guardianEmail);
+    }
+
+    void updateProfile(String goal, LocalDate birthDate, GuardianData guardian) {
+        this.goal = goal;
+        this.birthDate = birthDate;
+        this.guardianName = guardian.name();
+        this.guardianRelationship = guardian.relationship();
+        this.guardianPhone = guardian.phone();
+        this.guardianEmail = guardian.email();
+    }
 
     void update(String fullName, String email, String whatsappPhone) {
         this.fullName = fullName;
