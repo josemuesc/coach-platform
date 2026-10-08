@@ -13,6 +13,8 @@ import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
+import com.coachplatform.tenant.CrossTenantAccess;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -163,12 +165,117 @@ class ArchitectureTest {
                 .check(classes);
     }
 
+    // ---- domain purity, stricter -----------------------------------------------------------------
+
+    @Test
+    void domainOnlyDependsOnTheJdkItselfAndApiTypes() {
+        classes().that().resideInAPackage("..domain..")
+                .should().onlyDependOnClassesThat().resideInAnyPackage("java..", ROOT + "..domain..", ROOT + "..api..")
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void domainNeverReadsTheSystemClockDirectly() {
+        noClasses().that().resideInAPackage("..domain..")
+                .should().callMethodWhere(new DescribedPredicate<JavaMethodCall>("call a java.time now() that does not take a Clock") {
+                    @Override
+                    public boolean test(JavaMethodCall call) {
+                        return call.getTarget().getName().equals("now")
+                                && call.getTarget().getOwner().getPackageName().equals("java.time")
+                                && call.getTarget().getRawParameterTypes().stream().noneMatch(t -> t.getName().equals("java.time.Clock"));
+                    }
+                })
+                .because("domain classes receive an injected java.time.Clock so they can be tested")
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    // ---- layering ---------------------------------------------------------------------------------
+
+    @Test
+    void controllersDoNotTouchRepositories() {
+        noClasses().that().haveSimpleNameEndingWith("Controller")
+                .should().dependOnClassesThat().haveSimpleNameEndingWith("Repository")
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    // ---- cross-tenant access is confined -----------------------------------------------------------
+
+    @Test
+    void crossTenantComponentsAreNotPublic() {
+        classes().that().areAnnotatedWith(CrossTenantAccess.class)
+                .should().notBePublic()
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void crossTenantComponentsAreNeverUsedByControllers() {
+        noClasses().that().haveSimpleNameEndingWith("Controller")
+                .should().dependOnClassesThat().areAnnotatedWith(CrossTenantAccess.class)
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void crossTenantComponentsAreOnlyUsedByServicesAndJobs() {
+        classes().that().areAnnotatedWith(CrossTenantAccess.class)
+                .should().onlyHaveDependentClassesThat(
+                        simpleNameEndingWith("Service").or(simpleNameEndingWith("Job"))
+                                .or(DescribedPredicate.describe("the component itself", (JavaClass c) ->
+                                        c.isAnnotatedWith(CrossTenantAccess.class)
+                                                || c.getEnclosingClass().map(e -> e.isAnnotatedWith(CrossTenantAccess.class)).orElse(false))))
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void onlyCrossTenantComponentsMayTouchJdbc() {
+        noClasses().that().areNotAnnotatedWith(CrossTenantAccess.class)
+                .and(DescribedPredicate.describe("are not nested in a cross-tenant component", (JavaClass c) ->
+                        !c.getEnclosingClass().map(e -> e.isAnnotatedWith(CrossTenantAccess.class)).orElse(false)))
+                .should().dependOnClassesThat().resideInAnyPackage("org.springframework.jdbc..", "javax.sql..", "java.sql..")
+                .because("plain JDBC bypasses the Hibernate tenant filter")
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void repositoriesNeverUseNativeQueries() {
+        methods().that().areDeclaredInClassesThat().haveSimpleNameEndingWith("Repository")
+                .should(new ArchCondition<JavaMethod>("not use @Query(nativeQuery = true), which bypasses the tenant filter") {
+                    @Override
+                    public void check(JavaMethod m, ConditionEvents events) {
+                        m.getAnnotations().stream()
+                                .filter(a -> a.getRawType().getName().endsWith(".Query"))
+                                .filter(a -> Boolean.TRUE.equals(a.get("nativeQuery").orElse(false)))
+                                .forEach(a -> events.add(SimpleConditionEvent.violated(m, m.getFullName() + " is a native query")));
+                    }
+                })
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void everyBusinessEntityIsTenantScoped() {
+        classes().that().areAnnotatedWith("jakarta.persistence.Entity")
+                .and().resideInAnyPackage(pkg("students"), pkg("billing"), pkg("scheduling"), pkg("notifications"))
+                .should().beAssignableTo(com.coachplatform.tenant.TenantScopedEntity.class)
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
     // ---- sanity: the rules above are not vacuous ------------------------------------------------
 
     @Test
     void importedClassesIncludeTheProductionModules() {
         assertThat(classes.contain(com.coachplatform.coach.CoachService.class)).isTrue();
         assertThat(classes.contain(com.coachplatform.auth.AuthService.class)).isTrue();
+        assertThat(classes.contain(com.coachplatform.billing.BillingService.class)).isTrue();
+        assertThat(classes.contain(com.coachplatform.students.StudentService.class)).isTrue();
+        assertThat(classes.stream().filter(c -> c.isAnnotatedWith(CrossTenantAccess.class)).count()).isEqualTo(2);
     }
 
     // ---- helpers -------------------------------------------------------------------------------

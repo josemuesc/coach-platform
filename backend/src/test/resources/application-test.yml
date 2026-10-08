@@ -13,3 +13,7 @@ app:
   jwt:
     secret: test-secret-test-secret-test-secret-32b
     expiration-minutes: 60
+
+  billing:
+    expiry-job:
+      run-on-startup: false
