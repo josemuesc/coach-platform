@@ -4,6 +4,27 @@ Responde y comenta en español. Código, clases, tablas y variables en inglés.
 
 `docs/prompt-inicial.md` es el documento de referencia original. Si hay contradicciones con este archivo, manda CLAUDE.md.
 
+## Cómo trabajar en este repo (léelo primero)
+**Flujo acordado con el usuario** (aplica a cada fase y a cada cambio relevante):
+1. Antes de escribir código, MOSTRAR el diseño (tablas, endpoints, decisiones que necesitas del usuario) y esperar su aprobación.
+2. Después, empezar por las reglas de dominio y sus pruebas, y mostrarlas antes de construir servicios/endpoints.
+3. NO hacer `git commit` ni `git push` hasta que el usuario revise y lo pida. Una fase no empieza sin su visto bueno.
+4. Verificar de verdad: `mvn verify` (con Docker), probar contra Postgres real, y comprobar que las pruebas detectan fallos (mutaciones). Si algo no se pudo verificar, decirlo.
+5. Las decisiones se responden en lista numerada; dar una recomendación, no un catálogo. Responder en español; código, tablas y variables en inglés.
+
+**Estado de las fases.** 1 (auth/multi-tenant) y 2 (planes, alumnos, pagos, ciclos) revisadas y subidas. 3 (agenda: eventos personalizados/semipersonalizados, asistencias, disponibilidad, bloqueos, ajustes) IMPLEMENTADA y pendiente del visto bueno del usuario. Sigue la 4 (vista del alumno PWA + marca del entrenador), luego 5 (WhatsApp) y 6 (piloto). Todavía no existe `frontend/`.
+
+**Entorno de desarrollo (macOS, sin sudo).**
+- Java 21 y Maven NO están en el PATH. Están en `~/tools/jdk-21/Contents/Home` y `~/tools/maven`. En cada comando: `export JAVA_HOME=~/tools/jdk-21/Contents/Home PATH=$JAVA_HOME/bin:~/tools/maven/bin:$PATH`. Homebrew tiene permisos rotos: no usarlo para instalar.
+- `cd backend && mvn clean test` (rápido, H2 + ArchUnit) y `mvn clean verify` (añade las `*IT` con Testcontainers/PostgreSQL real; necesita Docker en marcha). Para una sola IT: `mvn verify -Dtest=NoSuchTest -Dsurefire.failIfNoSpecifiedTests=false -Dit.test=NombreIT` (pasar cada bandera como argumento aparte, sin variables de shell que las junten).
+- Para ejecutar el backend: copiar `backend/.env.example` a `backend/.env` (gitignored; la contraseña de la BD solo vive ahí, nunca en el repo, el chat ni los logs) y `set -a; source .env; set +a; mvn spring-boot:run`. El puerto 8080 suele estar ocupado por otro proyecto local (PHP en `::1`): usar `SERVER_PORT=8081` y `http://127.0.0.1:...` (no `localhost`).
+- Para probar de punta a punta sin tocar Supabase: Postgres desechable en Docker (`docker run -d --name coach-demo-pg -e POSTGRES_PASSWORD=<desechable> -p 127.0.0.1::5432 postgres:17-alpine`, leer el puerto con `docker port`), levantar el backend contra él y correr `scripts/demo-flow.sh`; luego borrar el contenedor.
+- Si Docker responde `permission denied` en el socket, es una restricción del entorno del agente, no del código.
+
+**Supabase.** Proyecto `coach-platform`, ref `rnkayaatdssplqwsleec`, región sa-east-1 (PostgreSQL 17). Hay un MCP de Supabase (`.mcp.json`) para consultar y validar SQL. Estado (última comprobación): SOLO la V1 está aplicada; V2, V3 y V4 las aplica Flyway en el próximo arranque contra esa BD. Las migraciones aplicadas son inmutables (checksum de V1: -2055938445). Para validar SQL nuevo en Supabase sin dejar nada: ejecutarlo dentro de `BEGIN; ...; ROLLBACK;`. Conexión de la app: pooler en modo SESIÓN (puerto 5432).
+
+**Git.** Remoto `origin` = `josemuesc/coach-platform` (rama `main`). La cuenta de Git configurada por defecto (`iasynthetix-ia`) no tiene permiso de escritura en ese repo (da 403 al hacer push): lo resuelve el usuario con su token/credencial. La V4 antigua (modelo 1:1) quedó subida pero nunca se aplicó a una base real; la V4 vigente es la de eventos y asistencias. Si alguna BD local tuvo la V4 vieja, hay que recrearla (checksum distinto).
+
 ## Producto
 PWA multi-entrenador (multi-tenant) que reemplaza hojas de cálculo y chats: el entrenador gestiona alumnos, agenda, paquetes, pagos y seguimiento; el alumno ve su ciclo, agenda/cancela y ve su progreso. Piloto: entrenador de Smart Fit (Colombia), 10 alumnos. Mercado: Colombia, COP, America/Bogota, español. Prioridad: simplicidad; WhatsApp como canal principal. El alumno ve la marca de SU entrenador.
 
