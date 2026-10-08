@@ -47,6 +47,12 @@ public class StudentService {
         return students.findAllByOrderByFullNameAsc().stream().map(StudentService::toSummary).toList();
     }
 
+    /** The student behind a logged-in STUDENT user (tenant-filtered like every query). 404 if the user is no student. */
+    @Transactional(readOnly = true)
+    public StudentSummary findByUserId(UUID userId) {
+        return toSummary(students.findByUserId(userId).orElseThrow(StudentNotFoundException::new));
+    }
+
     @Transactional(readOnly = true)
     public StudentSummary get(UUID studentId) {
         return toSummary(require(studentId));

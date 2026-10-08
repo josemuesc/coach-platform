@@ -1,5 +1,6 @@
 package com.coachplatform.billing;
 
+import com.coachplatform.billing.api.CycleSessions;
 import com.coachplatform.billing.api.CycleStatus;
 import com.coachplatform.billing.api.CycleSummary;
 import com.coachplatform.billing.api.ExtendCycleCommand;
@@ -25,12 +26,14 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Public API of billing. Orchestration only: it loads entities, translates them to {@link CycleState}, asks
  * {@link CycleRules} for the decision, and persists the result. Every write on a student's cycles first locks the
- * student row, so concurrent payments of the same student are serialized (the partial unique index is the last guard).
+ * student row (always the FIRST lock taken), so concurrent work on one student is serialized; the partial unique
+ * index is the last guard.
  */
 @Service
 public class BillingService {
@@ -41,17 +44,20 @@ public class BillingService {
     private final CycleRepository cycles;
     private final PaymentRepository payments;
     private final CycleExtensionRepository extensions;
+    private final CycleSessions cycleSessions;
     private final CycleRules rules;
     private final CycleCalendar calendar;
 
-    BillingService(StudentService students, CoachService coaches, PlanRepository plans, CycleRepository cycles, PaymentRepository payments,
-                   CycleExtensionRepository extensions, CycleRules rules, CycleCalendar calendar) {
+    BillingService(StudentService students, CoachService coaches, PlanRepository plans, CycleRepository cycles,
+                   PaymentRepository payments, CycleExtensionRepository extensions, CycleSessions cycleSessions,
+                   CycleRules rules, CycleCalendar calendar) {
         this.students = students;
         this.coaches = coaches;
         this.plans = plans;
         this.cycles = cycles;
         this.payments = payments;
         this.extensions = extensions;
+        this.cycleSessions = cycleSessions;
         this.rules = rules;
         this.calendar = calendar;
     }
@@ -63,7 +69,17 @@ public class BillingService {
         Plan plan = plans.findById(cmd.planId()).filter(Plan::isActive).orElseThrow(PlanNotFoundException::new);
 
         Optional<Cycle> previous = cycles.findFirstByStudentIdOrderByStartDateDescCreatedAtDesc(studentId);
-        var result = rules.openCycle(cmd.paidOn(), plan.getClassesIncluded(), previous.map(c -> c.toState(calendar)));
+        int pending = previous.map(c -> pendingMarks(c, c.toState(calendar))).orElse(0);
+        var result = openCycle(cmd, plan, previous, pending);
+
+        // Classes of the old cycle that have not started yet (only possible when renewing on its deadline day) move
+        // to the new cycle and count against ITS quota: check before writing anything.
+        int toTransfer = result.previousUpdated().isPresent()
+                ? cycleSessions.futureScheduledCount(previous.orElseThrow().getId()) : 0;
+        if (toTransfer > plan.getClassesIncluded()) {
+            throw new CycleRuleException(CycleRuleException.Code.TRANSFER_EXCEEDS_PLAN, toTransfer
+                    + " scheduled class(es) of the previous cycle do not fit in a plan of " + plan.getClassesIncluded());
+        }
 
         try {
             if (result.previousUpdated().isPresent()) {
@@ -73,6 +89,9 @@ public class BillingService {
                 cycles.saveAndFlush(previous.get());
             }
             Cycle cycle = cycles.saveAndFlush(new Cycle(studentId, plan.getId(), result.newCycle()));
+            if (toTransfer > 0) {
+                cycleSessions.moveFutureSessions(previous.orElseThrow().getId(), cycle.getId());
+            }
             long amount = cmd.amountCop() != null ? cmd.amountCop() : plan.getPriceCop();
             Payment payment = payments.saveAndFlush(new Payment(studentId, cycle.getId(), amount, cmd.method(),
                     result.newCycle().startDate(), recordedBy));
@@ -85,40 +104,80 @@ public class BillingService {
         }
     }
 
+    private CycleRules.OpenCycleResult openCycle(RegisterPaymentCommand cmd, Plan plan, Optional<Cycle> previous, int pending) {
+        try {
+            return rules.openCycle(cmd.paidOn(), plan.getClassesIncluded(), previous.map(c -> c.toState(calendar)), pending);
+        } catch (CycleRuleException e) {
+            if (e.code() == CycleRuleException.Code.PENDING_SESSIONS_TO_MARK) {
+                throw new PendingSessionsException(cycleSessions.pendingMarks(previous.orElseThrow().getId()));
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Moves the deadline of a cycle, or REOPENS an expired one (only the student's latest cycle, never a completed
+     * one), within the cap over the original deadline. The reason is mandatory and the audit row records who, when,
+     * the previous and new deadline, and whether it was a reopening.
+     */
     @Transactional
     public CycleSummary extendCycle(UUID cycleId, ExtendCycleCommand cmd, UUID extendedBy) {
-        Cycle cycle = cycles.findById(cycleId).orElseThrow(CycleNotFoundException::new);
-        students.lockForUpdate(cycle.getStudentId());
-        cycle = cycles.findById(cycleId).orElseThrow(CycleNotFoundException::new); // re-read under the lock
+        UUID studentId = cycles.findStudentIdById(cycleId).orElseThrow(CycleNotFoundException::new);
+        students.lockForUpdate(studentId);                                          // 1st lock: the student
+        Cycle cycle = cycles.findById(cycleId).orElseThrow(CycleNotFoundException::new);   // read under the lock
 
+        boolean hasNewer = cycles.findFirstByStudentIdOrderByStartDateDescCreatedAtDesc(cycle.getStudentId())
+                .map(latest -> !latest.getId().equals(cycleId)).orElse(false);
+        CycleState stored = cycle.toState(calendar);
         BillingSettings settings = coaches.billingSettings(TenantContext.get());
-        var result = rules.extend(cycle.toState(calendar), cmd.newEndDate(), extendedBy, settings.maxExtensionDays());
+        var result = rules.extend(stored, cmd.newEndDate(), extendedBy, settings.maxExtensionDays(),
+                pendingMarks(cycle, stored), hasNewer);
         cycle.apply(result.cycle(), calendar.now());
         cycles.saveAndFlush(cycle);
         var record = result.record();
         extensions.save(new CycleExtensionRecord(cycleId, record.previousEndDate(), record.newEndDate(),
-                cmd.reason().trim(), record.extendedBy(), record.extendedAt()));
+                cmd.reason().trim(), record.extendedBy(), record.extendedAt(), record.reopened()));
+        return toSummary(cycle);
+    }
+
+    /**
+     * Uses up one class of the cycle (the class was just marked attended / no-show). The caller holds the student
+     * lock and marks the class AFTER this call, so the class being marked still counts as pending: a cycle past its
+     * deadline stays open exactly long enough to take it.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public CycleSummary consumeClass(UUID cycleId) {
+        Cycle cycle = cycles.findById(cycleId).orElseThrow(CycleNotFoundException::new);
+        CycleState stored = cycle.toState(calendar);
+        cycle.apply(rules.consumeClass(stored, pendingMarks(cycle, stored)), calendar.now());
+        cycles.saveAndFlush(cycle);
         return toSummary(cycle);
     }
 
     /** Persists the real status of a cycle that is overdue or fully used. Idempotent; used by the daily job. */
     @Transactional
     public void closeIfDue(UUID cycleId) {
-        Cycle cycle = cycles.findById(cycleId).orElse(null);
-        if (cycle == null) {
+        UUID studentId = cycles.findStudentIdById(cycleId).orElse(null);
+        if (studentId == null) {
             return;
         }
-        students.lockForUpdate(cycle.getStudentId());
-        cycle = cycles.findById(cycleId).orElse(null);
+        students.lockForUpdate(studentId);                                          // 1st lock: the student
+        Cycle cycle = cycles.findById(cycleId).orElse(null);                        // read under the lock
         if (cycle == null) {
             return;
         }
         CycleState stored = cycle.toState(calendar);
-        CycleState effective = rules.evaluate(stored);
+        CycleState effective = rules.evaluate(stored, pendingMarks(cycle, stored));
         if (!effective.equals(stored)) {
             cycle.apply(effective, calendar.now());
             cycles.save(cycle);
         }
+    }
+
+    /** One cycle with its effective state (404 for a cycle of another tenant). */
+    @Transactional(readOnly = true)
+    public CycleSummary cycle(UUID cycleId) {
+        return toSummary(cycles.findById(cycleId).orElseThrow(CycleNotFoundException::new));
     }
 
     @Transactional(readOnly = true)
@@ -146,7 +205,7 @@ public class BillingService {
 
     /**
      * Active students with their cycle state: ACTIVE, EXPIRING_SOON (few days or few classes left, per the coach's
-     * settings: 5 days / 1 class by default) or NO_CYCLE.
+     * settings: 5 days / 1 class by default) or NO_CYCLE, plus how many started classes still need marking.
      */
     @Transactional(readOnly = true)
     public List<StudentBillingOverview> overview() {
@@ -162,19 +221,28 @@ public class BillingService {
         return students.list().stream().filter(StudentSummary::active).map(s -> {
             CycleSummary c = activeByStudent.get(s.id());
             if (c == null) {
-                return new StudentBillingOverview(s.id(), s.fullName(), OverviewStatus.NO_CYCLE, null, null);
+                return new StudentBillingOverview(s.id(), s.fullName(), OverviewStatus.NO_CYCLE, null, null, 0);
             }
             boolean soon = ChronoUnit.DAYS.between(today, c.endDate()) <= settings.expiringSoonDays()
                     || c.classesRemaining() <= settings.expiringSoonClasses();
             return new StudentBillingOverview(s.id(), s.fullName(),
-                    soon ? OverviewStatus.EXPIRING_SOON : OverviewStatus.ACTIVE, c.endDate(), c.classesRemaining());
+                    soon ? OverviewStatus.EXPIRING_SOON : OverviewStatus.ACTIVE, c.endDate(), c.classesRemaining(),
+                    c.pendingMarks());
         }).toList();
     }
 
+    /** Only an ACTIVE-as-stored cycle can have unmarked classes; closed cycles skip the query. */
+    private int pendingMarks(Cycle cycle, CycleState stored) {
+        return stored.isActive() ? cycleSessions.pendingMarkCount(cycle.getId()) : 0;
+    }
+
     private CycleSummary toSummary(Cycle cycle) {
-        CycleState effective = rules.evaluate(cycle.toState(calendar));
+        CycleState stored = cycle.toState(calendar);
+        int pending = pendingMarks(cycle, stored);
+        CycleState effective = rules.evaluate(stored, pending);
         return new CycleSummary(cycle.getId(), cycle.getStudentId(), cycle.getPlanId(), effective.startDate(),
                 effective.endDate(), cycle.getOriginalEndDate(), effective.classesIncluded(), effective.classesUsed(),
-                effective.classesRemaining(), effective.classesLost(), effective.status());
+                effective.classesRemaining(), effective.classesLost(), effective.isActive() ? pending : 0,
+                effective.status());
     }
 }

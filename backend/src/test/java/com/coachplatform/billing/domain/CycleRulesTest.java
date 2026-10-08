@@ -226,11 +226,91 @@ class CycleRulesTest {
         assertThat(codeOf(() -> rules.extend(cycle, LocalDate.of(2026, 11, 1), UUID.randomUUID(), 60))).isEqualTo(Code.INVALID_EXTENSION);
     }
 
+    // ---- reopening an expired cycle -----------------------------------------------------------------
+
+    private static CycleState expiredByDate() {
+        return active("2026-10-06", "2026-11-06", 8, 5);   // seen on Nov 9: three days past its deadline
+    }
+
     @Test
-    void onlyAnActiveCycleCanBeExtended() {
-        var late = rulesOn("2026-11-09"); // already past the deadline
-        assertThat(codeOf(() -> late.extend(active("2026-10-06", "2026-11-06", 8, 6), LocalDate.of(2026, 11, 20), UUID.randomUUID(), 60)))
+    void anExpiredCycleCanBeReopenedByGivingItADeadlineOfTodayOrLater() {
+        UUID coach = UUID.randomUUID();
+        var result = rulesOn("2026-11-09").extend(expiredByDate(), LocalDate.of(2026, 11, 20), coach, 60, 0, false);
+
+        assertThat(result.cycle().status()).isEqualTo(CycleStatus.ACTIVE);
+        assertThat(result.cycle().endDate()).isEqualTo(LocalDate.of(2026, 11, 20));
+        assertThat(result.cycle().originalEndDate()).isEqualTo(LocalDate.of(2026, 11, 6));
+        assertThat(result.cycle().classesUsed()).isEqualTo(5);   // nothing is added or lost
+        assertThat(result.record().reopened()).isTrue();
+        assertThat(result.record().extendedBy()).isEqualTo(coach);
+        assertThat(result.record().previousEndDate()).isEqualTo(LocalDate.of(2026, 11, 6));
+    }
+
+    @Test
+    void aReopenedDeadlineInThePastWouldExpireAtOnceSoItIsRejected() {
+        var cycle = expiredByDate();
+        assertThat(codeOf(() -> rulesOn("2026-11-09").extend(cycle, LocalDate.of(2026, 11, 8), UUID.randomUUID(), 60, 0, false)))
+                .isEqualTo(Code.INVALID_EXTENSION);
+        // today itself is fine
+        assertThat(rulesOn("2026-11-09").extend(cycle, LocalDate.of(2026, 11, 9), UUID.randomUUID(), 60, 0, false).cycle().isActive()).isTrue();
+    }
+
+    @Test
+    void reopeningIsAlsoLimitedByTheCapOverTheOriginalDeadline() {
+        var cycle = expiredByDate();
+        assertThat(codeOf(() -> rulesOn("2026-11-09").extend(cycle, LocalDate.of(2027, 1, 6), UUID.randomUUID(), 60, 0, false)))
+                .isEqualTo(Code.EXTENSION_LIMIT_EXCEEDED);
+    }
+
+    @Test
+    void aCompletedCycleCanNeverBeReopenedOrExtended() {
+        var completed = new CycleState(LocalDate.of(2026, 10, 6), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 6), 8, 8,
+                CycleStatus.COMPLETED, LocalDate.of(2026, 10, 28));
+        assertThat(codeOf(() -> rulesOn("2026-11-09").extend(completed, LocalDate.of(2026, 11, 20), UUID.randomUUID(), 60, 0, false)))
+                .isEqualTo(Code.REOPEN_NOT_ALLOWED);
+        // all classes used but still stored as ACTIVE: it is effectively completed, same answer
+        assertThat(codeOf(() -> rulesOn("2026-11-03").extend(active("2026-10-06", "2026-11-06", 8, 8), LocalDate.of(2026, 11, 20), UUID.randomUUID(), 60, 0, false)))
+                .isEqualTo(Code.REOPEN_NOT_ALLOWED);
+    }
+
+    @Test
+    void anExpiredCycleCannotBeReopenedOnceTheStudentHasANewerCycle() {
+        assertThat(codeOf(() -> rulesOn("2026-11-09").extend(expiredByDate(), LocalDate.of(2026, 11, 20), UUID.randomUUID(), 60, 0, true)))
+                .isEqualTo(Code.REOPEN_NOT_ALLOWED);
+    }
+
+    // ---- classes still to be marked hold the cycle open ---------------------------------------------
+
+    @Test
+    void aCyclePastItsDeadlineDoesNotExpireWhileStartedClassesAreUnmarked() {
+        var overdue = active("2026-10-06", "2026-11-06", 8, 5);
+        assertThat(rulesOn("2026-11-09").evaluate(overdue, 0).status()).isEqualTo(CycleStatus.EXPIRED);
+        assertThat(rulesOn("2026-11-09").evaluate(overdue, 2).status()).isEqualTo(CycleStatus.ACTIVE);
+    }
+
+    @Test
+    void anOverdueCycleWithPendingMarksStillTakesTheMarks() {
+        var next = rulesOn("2026-11-09").consumeClass(active("2026-10-06", "2026-11-06", 8, 5), 1);
+        assertThat(next.classesUsed()).isEqualTo(6);
+        assertThat(next.status()).isEqualTo(CycleStatus.ACTIVE);
+        // without a pending mark it has simply expired
+        assertThat(codeOf(() -> rulesOn("2026-11-09").consumeClass(active("2026-10-06", "2026-11-06", 8, 5), 0)))
                 .isEqualTo(Code.CYCLE_NOT_ACTIVE);
+        // marking the last class of an overdue cycle completes it
+        assertThat(rulesOn("2026-11-09").consumeClass(active("2026-10-06", "2026-11-06", 8, 7), 1).status()).isEqualTo(CycleStatus.COMPLETED);
+    }
+
+    @Test
+    void renewalIsBlockedWhileTheOldCycleHasUnmarkedClasses() {
+        var previous = Optional.of(active("2026-10-06", "2026-11-06", 8, 5));
+
+        // on the deadline day and after it (late payer): blocked until the coach marks them
+        assertThat(codeOf(() -> rulesOn("2026-11-06").openCycle(null, 8, previous, 2))).isEqualTo(Code.PENDING_SESSIONS_TO_MARK);
+        assertThat(codeOf(() -> rulesOn("2026-11-12").openCycle(null, 8, previous, 1))).isEqualTo(Code.PENDING_SESSIONS_TO_MARK);
+        // before the deadline it is simply "still active"
+        assertThat(codeOf(() -> rulesOn("2026-11-02").openCycle(null, 8, previous, 1))).isEqualTo(Code.ACTIVE_CYCLE_EXISTS);
+        // once resolved, the renewal goes through
+        assertThat(rulesOn("2026-11-12").openCycle(null, 8, previous, 0).newCycle().startDate()).isEqualTo(LocalDate.of(2026, 11, 12));
     }
 
     @Test

@@ -208,15 +208,45 @@ class BillingFlowTest extends ApiIntegrationTest {
     }
 
     @Test
-    void anExpiredCycleCannotBeExtended() throws Exception {
+    void anExpiredCycleCanBeReopenedWithAMandatoryReasonAndItIsAudited() throws Exception {
         pay(coachToken, studentId, planId, "");
         String cycleId = JsonPath.read(activeCycleJson(), "$.id");
 
-        atBogota("2026-11-08");
-        mvc.perform(withToken(post("/api/coach/cycles/" + cycleId + "/extend"), coachToken)
-                        .contentType(MediaType.APPLICATION_JSON)
+        atBogota("2026-11-08");   // two days past the deadline: expired
+        mvc.perform(withToken(get("/api/coach/students/" + studentId + "/cycles/active"), coachToken)).andExpect(status().isNotFound());
+
+        // a reason is mandatory
+        mvc.perform(withToken(post("/api/coach/cycles/" + cycleId + "/extend"), coachToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newEndDate\":\"2026-11-20\",\"reason\":\"  \"}")).andExpect(status().isBadRequest());
+        // a past deadline would expire at once
+        mvc.perform(withToken(post("/api/coach/cycles/" + cycleId + "/extend"), coachToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newEndDate\":\"2026-11-07\",\"reason\":\"x\"}")).andExpect(status().isUnprocessableEntity());
+
+        mvc.perform(withToken(post("/api/coach/cycles/" + cycleId + "/extend"), coachToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newEndDate\":\"2026-11-20\",\"reason\":\"Entrenador estuvo enfermo\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ACTIVE")).andExpect(jsonPath("$.endDate").value("2026-11-20"));
+
+        assertThat(activeCycleJson()).contains("\"status\":\"ACTIVE\"");
+        var audit = jdbc.queryForList("select reopened, reason from cycle_extension where cycle_id = ?", java.util.UUID.fromString(cycleId));
+        assertThat(audit).hasSize(1);
+        assertThat(audit.get(0).get("REOPENED")).isEqualTo(true);
+        assertThat(audit.get(0).get("REASON")).isEqualTo("Entrenador estuvo enfermo");
+        assertThat(storedStatuses()).containsExactly("ACTIVE");
+    }
+
+    @Test
+    void anExpiredCycleCannotBeReopenedOnceTheStudentRenewed() throws Exception {
+        pay(coachToken, studentId, planId, "");
+        String oldCycle = JsonPath.read(activeCycleJson(), "$.id");
+
+        atBogota("2026-11-12");
+        assertThat(pay(coachToken, studentId, planId, "").getResponse().getStatus()).isEqualTo(201);   // newer cycle
+
+        mvc.perform(withToken(post("/api/coach/cycles/" + oldCycle + "/extend"), coachToken).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"newEndDate\":\"2026-11-20\",\"reason\":\"tarde\"}"))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CYCLE_NOT_ACTIVE"));
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("REOPEN_NOT_ALLOWED"));
+        assertThat(jdbc.queryForObject("select count(*) from cycle where student_id = ? and status = 'ACTIVE'",
+                Integer.class, java.util.UUID.fromString(studentId))).isEqualTo(1);
     }
 
     @Test

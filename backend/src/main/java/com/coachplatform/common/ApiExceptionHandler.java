@@ -12,8 +12,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class ApiExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
-    ResponseEntity<Map<String, String>> api(ApiException e) {
-        return ResponseEntity.status(e.status()).body(Map.of("code", e.code()));
+    ResponseEntity<Map<String, Object>> api(ApiException e) {
+        Map<String, Object> body = new java.util.LinkedHashMap<>();
+        body.put("code", e.code());
+        if (!e.details().isEmpty()) {
+            body.put("details", e.details());
+        }
+        return ResponseEntity.status(e.status()).body(body);
     }
 
     @ExceptionHandler(BadCredentialsException.class)

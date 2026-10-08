@@ -267,6 +267,45 @@ class ArchitectureTest {
                 .check(classes);
     }
 
+    // ---- the single approved internal port -------------------------------------------------------
+
+    @Test
+    void cycleSessionsIsTheOnlyInterfaceInAnyApiPackage() {
+        classes().that().areInterfaces().and().resideInAPackage("..api..")
+                .should().haveSimpleName("CycleSessions")
+                .because("the only approved internal port is billing.api.CycleSessions; other module boundaries use *Service classes")
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void cycleSessionsIsImplementedOnlyByScheduling() {
+        classes().that().implement(com.coachplatform.billing.api.CycleSessions.class)
+                .should().resideInAPackage(pkg("scheduling"))
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void nothingOutsideTheApiPackagesIsImplementedAcrossModules() {
+        // A class may implement an interface of another module only if that interface is in an ..api.. package
+        // (and the previous rules narrow that to CycleSessions). Repositories/Spring interfaces are not module code.
+        for (String module : MODULES) {
+            for (String other : MODULES) {
+                if (module.equals(other)) {
+                    continue;
+                }
+                noClasses().that().resideInAPackage(pkg(module))
+                        .should().implement(DescribedPredicate.describe("an interface of module '" + other + "' outside its api package",
+                                (JavaClass c) -> c.isInterface() && c.getPackageName().startsWith(ROOT + "." + other)
+                                        && !c.getPackageName().contains(".api")
+                                        && !c.getPackageName().contains(".domain")))
+                        .allowEmptyShould(true)
+                        .check(classes);
+            }
+        }
+    }
+
     // ---- sanity: the rules above are not vacuous ------------------------------------------------
 
     @Test
@@ -275,6 +314,8 @@ class ArchitectureTest {
         assertThat(classes.contain(com.coachplatform.auth.AuthService.class)).isTrue();
         assertThat(classes.contain(com.coachplatform.billing.BillingService.class)).isTrue();
         assertThat(classes.contain(com.coachplatform.students.StudentService.class)).isTrue();
+        assertThat(classes.contain(com.coachplatform.scheduling.SchedulingService.class)).isTrue();
+        assertThat(classes.contain(com.coachplatform.billing.api.CycleSessions.class)).isTrue();
         assertThat(classes.stream().filter(c -> c.isAnnotatedWith(CrossTenantAccess.class)).count()).isEqualTo(2);
     }
 

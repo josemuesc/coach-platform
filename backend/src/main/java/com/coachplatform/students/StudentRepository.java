@@ -15,6 +15,8 @@ interface StudentRepository extends JpaRepository<Student, UUID> {
 
     Optional<Student> findByEmail(String email);
 
+    Optional<Student> findByUserId(UUID userId);
+
     List<Student> findAllByOrderByFullNameAsc();
 
     /** SELECT ... FOR UPDATE, tenant-filtered like every other query. Serializes work on one student. */

@@ -12,7 +12,7 @@ spring:
 app:
   jwt:
     secret: test-secret-test-secret-test-secret-32b
-    expiration-minutes: 60
+    expiration-minutes: 144000
 
   billing:
     expiry-job:

@@ -6,6 +6,8 @@ import static com.coachplatform.billing.domain.CycleRuleException.Code.EXTENSION
 import static com.coachplatform.billing.domain.CycleRuleException.Code.INVALID_EXTENSION;
 import static com.coachplatform.billing.domain.CycleRuleException.Code.INVALID_PAYMENT_DATE;
 import static com.coachplatform.billing.domain.CycleRuleException.Code.INVALID_PLAN;
+import static com.coachplatform.billing.domain.CycleRuleException.Code.PENDING_SESSIONS_TO_MARK;
+import static com.coachplatform.billing.domain.CycleRuleException.Code.REOPEN_NOT_ALLOWED;
 
 import com.coachplatform.billing.api.CycleStatus;
 import java.time.Instant;
@@ -28,8 +30,10 @@ public final class CycleRules {
      * The state a cycle really has today, whatever is stored:
      * all classes used -> COMPLETED (even before the deadline); past the deadline with classes left -> EXPIRED.
      * The deadline day itself is still usable. COMPLETED wins when both apply.
+     * A cycle past its deadline does NOT expire while classes that already started are still unmarked
+     * ({@code pendingMarks > 0}): the coach must decide those first, otherwise classes would be lost undecided.
      */
-    public CycleState evaluate(CycleState stored) {
+    public CycleState evaluate(CycleState stored, int pendingMarks) {
         if (!stored.isActive()) {
             return stored;
         }
@@ -37,10 +41,14 @@ public final class CycleRules {
         if (stored.classesUsed() >= stored.classesIncluded()) {
             return stored.completed(today);
         }
-        if (today.isAfter(stored.endDate())) {
+        if (today.isAfter(stored.endDate()) && pendingMarks == 0) {
             return stored.expired();
         }
         return stored;
+    }
+
+    public CycleState evaluate(CycleState stored) {
+        return evaluate(stored, 0);
     }
 
     public record OpenCycleResult(CycleState newCycle, Optional<CycleState> previousUpdated) {
@@ -55,6 +63,12 @@ public final class CycleRules {
      *         persisted with a different status (lazy close, or renewal on its deadline day), its updated state
      */
     public OpenCycleResult openCycle(LocalDate requestedPaidOn, int classesIncluded, Optional<CycleState> previous) {
+        return openCycle(requestedPaidOn, classesIncluded, previous, 0);
+    }
+
+    /** @param previousPendingMarks classes of the previous cycle that already started and are still unmarked */
+    public OpenCycleResult openCycle(LocalDate requestedPaidOn, int classesIncluded, Optional<CycleState> previous,
+                                     int previousPendingMarks) {
         if (classesIncluded <= 0) {
             throw new CycleRuleException(INVALID_PLAN, "A plan must include at least one class");
         }
@@ -71,12 +85,16 @@ public final class CycleRules {
         Optional<CycleState> previousUpdated = Optional.empty();
         if (previous.isPresent()) {
             CycleState stored = previous.get();
-            CycleState effective = evaluate(stored);
+            CycleState effective = evaluate(stored, previousPendingMarks);
             if (effective.isActive()) {
                 // Still active: renewing is only allowed from its deadline day onwards.
                 if (today.isBefore(effective.endDate())) {
                     throw new CycleRuleException(ACTIVE_CYCLE_EXISTS,
                             "The student already has an active cycle until " + effective.endDate());
+                }
+                if (previousPendingMarks > 0) {
+                    throw new CycleRuleException(PENDING_SESSIONS_TO_MARK,
+                            "The previous cycle has " + previousPendingMarks + " class(es) still to be marked");
                 }
                 if (paidOn.isBefore(effective.endDate())) {
                     throw new CycleRuleException(INVALID_PAYMENT_DATE,
@@ -103,7 +121,12 @@ public final class CycleRules {
 
     /** Counts one class as seen. Closes the cycle as COMPLETED when the last class is used, even before the deadline. */
     public CycleState consumeClass(CycleState stored) {
-        CycleState effective = evaluate(stored);
+        return consumeClass(stored, 0);
+    }
+
+    /** @param pendingMarks unmarked started classes INCLUDING the one being marked: keeps an overdue cycle open for it */
+    public CycleState consumeClass(CycleState stored, int pendingMarks) {
+        CycleState effective = evaluate(stored, pendingMarks);
         if (!effective.isActive()) {
             throw new CycleRuleException(CYCLE_NOT_ACTIVE, "The cycle is " + effective.status());
         }
@@ -111,21 +134,45 @@ public final class CycleRules {
         return used.classesUsed() == used.classesIncluded() ? used.completed(calendar.today()) : used;
     }
 
-    public record ExtensionRecord(LocalDate previousEndDate, LocalDate newEndDate, UUID extendedBy, Instant extendedAt) {
+    public record ExtensionRecord(LocalDate previousEndDate, LocalDate newEndDate, UUID extendedBy, Instant extendedAt,
+                                  boolean reopened) {
     }
 
     public record ExtensionResult(CycleState cycle, ExtensionRecord record) {
     }
 
-    /**
-     * The coach moves the deadline of a cycle that is still active; who and when are captured in the record.
-     * The TOTAL extension is capped: the new deadline cannot be more than {@code maxExtensionDays} after the
-     * ORIGINAL deadline, however many times the cycle is extended.
-     */
     public ExtensionResult extend(CycleState stored, LocalDate newEndDate, UUID extendedBy, int maxExtensionDays) {
-        CycleState effective = evaluate(stored);
-        if (!effective.isActive()) {
-            throw new CycleRuleException(CYCLE_NOT_ACTIVE, "Only an active cycle can be extended");
+        return extend(stored, newEndDate, extendedBy, maxExtensionDays, 0, false);
+    }
+
+    /**
+     * The coach moves the deadline of a cycle; who and when are captured in the record.
+     * <ul>
+     *   <li>The TOTAL extension is capped: the new deadline cannot be more than {@code maxExtensionDays} after the
+     *       ORIGINAL deadline, however many times the cycle is extended.</li>
+     *   <li>An EXPIRED cycle can be REOPENED the same way (it becomes ACTIVE again) unless a newer cycle exists or it
+     *       closed as COMPLETED. The new deadline must then be today or later, or it would expire at once.</li>
+     * </ul>
+     *
+     * @param pendingMarks   unmarked started classes of this cycle
+     * @param hasNewerCycle  the student already has a more recent cycle
+     */
+    public ExtensionResult extend(CycleState stored, LocalDate newEndDate, UUID extendedBy, int maxExtensionDays,
+                                  int pendingMarks, boolean hasNewerCycle) {
+        CycleState effective = evaluate(stored, pendingMarks);
+        boolean reopening = false;
+        if (effective.status() == CycleStatus.COMPLETED) {
+            throw new CycleRuleException(REOPEN_NOT_ALLOWED, "A completed cycle cannot be extended or reopened");
+        }
+        if (effective.status() == CycleStatus.EXPIRED) {
+            if (hasNewerCycle) {
+                throw new CycleRuleException(REOPEN_NOT_ALLOWED,
+                        "An expired cycle cannot be reopened once the student has a newer cycle");
+            }
+            if (newEndDate.isBefore(calendar.today())) {
+                throw new CycleRuleException(INVALID_EXTENSION, "A reopened cycle needs a deadline of today or later");
+            }
+            reopening = true;
         }
         if (!newEndDate.isAfter(effective.endDate())) {
             throw new CycleRuleException(INVALID_EXTENSION, "The new deadline must be after " + effective.endDate());
@@ -135,7 +182,8 @@ public final class CycleRules {
             throw new CycleRuleException(EXTENSION_LIMIT_EXCEEDED, "A cycle cannot be extended more than "
                     + maxExtensionDays + " days past its original deadline (latest allowed: " + latestAllowed + ")");
         }
-        return new ExtensionResult(effective.withEndDate(newEndDate),
-                new ExtensionRecord(effective.endDate(), newEndDate, extendedBy, calendar.now()));
+        CycleState result = reopening ? effective.reopened(newEndDate) : effective.withEndDate(newEndDate);
+        return new ExtensionResult(result,
+                new ExtensionRecord(effective.endDate(), newEndDate, extendedBy, calendar.now(), reopening));
     }
 }

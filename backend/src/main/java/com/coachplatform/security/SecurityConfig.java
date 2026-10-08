@@ -43,6 +43,7 @@ public class SecurityConfig {
                                 INVITATION_PREVIEW_PATH, INVITATION_ACCEPT_PATH).permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/coach/**").hasRole("COACH")
+                        .requestMatchers("/api/student/**").hasRole("STUDENT")
                         .anyRequest().authenticated())
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

@@ -68,10 +68,9 @@ A futuro una organización podría ver únicamente métricas de cumplimiento de 
 - Al cancelar a tiempo, el alumno elige la nueva fecha en ese momento según la disponibilidad del entrenador (original → `rescheduled`, nueva `scheduled` con `rescheduled_from`).
 
 ## Suposiciones vigentes (por confirmar)
-- classes_used + clases agendadas ≤ classes_included.
-- Clase pasada sin marcar queda "pendiente de marcar", se avisa al profe y no se descuenta sola.
 - Un alumno pertenece a un solo entrenador.
-- Duración de clase fija por entrenador (configurable), aún sin definir.
+- Clases 1:1 (sin clases grupales) y duración fija por entrenador, configurable (por defecto 60 min). Falta confirmarla con el entrenador del piloto.
+- Resueltas en la Fase 3 (ya son reglas): `classes_used + agendadas <= classes_included`; la clase pasada sin marcar queda "pendiente de marcar", no se descuenta sola y mantiene abierto el ciclo (el aviso al entrenador por WhatsApp llega en la Fase 5; hoy `GET /api/coach/sessions/pending` y `pendingMarks` en el resumen).
 
 ## Requisitos antes del piloto (obligatorios)
 - Límite de intentos: IMPLEMENTADO en memoria (válido para UNA sola instancia): login por email (5 fallos/15 min, cuenta también emails inexistentes), login por IP (30), invitaciones preview/accept por IP (10). PENDIENTES (aprobado para el piloto, resolver después):
@@ -80,7 +79,7 @@ A futuro una organización podría ver únicamente métricas de cumplimiento de 
   - `SERVER_FORWARD_HEADERS_STRATEGY=native` SOLO se activa detrás de un proxy de confianza (Railway/Render/Nginx propio) que reescribe `X-Forwarded-For`. Si se activa sin proxy, cualquier cliente puede falsificar esa cabecera y esquivar el límite por IP; si NO se activa detrás de un proxy, todos los usuarios comparten la IP del proxy y se bloquean entre sí.
 - Política de contraseña: mínimo 10 caracteres (máx. 72 por BCrypt). Revisar si se endurece más.
 - `flyway_schema_history` debe tener RLS activado a mano (Flyway la crea): `ALTER TABLE public.flyway_schema_history ENABLE ROW LEVEL SECURITY;` Ya hecho en el proyecto Supabase `coach-platform`; repetirlo en cualquier base nueva.
-- Las migraciones aplicadas son INMUTABLES (V1 y V2 ya están en Supabase): todo cambio de esquema va en una migración nueva.
+- Las migraciones aplicadas son INMUTABLES. En Supabase solo está aplicada la V1 (hasta la última comprobación); V2, V3 y V4 las aplica Flyway en el próximo arranque. V4 hace `CREATE EXTENSION IF NOT EXISTS btree_gist` (verificado que funciona en Supabase). Todo cambio de esquema va en una migración nueva.
 
 ## Arquitectura del backend
 Paquete raíz `com.coachplatform`. Organización por módulos de funcionalidad, no por capas técnicas:
@@ -92,7 +91,7 @@ Reglas:
 - **API pública de un módulo** = sus clases `*Service` + los tipos de su subpaquete `api` (records/DTOs). Un módulo solo usa a otro por ahí; nunca toca sus repositorios o entidades.
 - Los servicios públicos reciben y devuelven solo IDs, valores simples, enums y records/DTOs pequeños; **nunca entidades**.
 - Las reglas de negocio (ciclos, ventana de cancelación, reagendado, extensión de fecha) viven en clases de `<módulo>.domain`: Java simple, trabajan con valores (fechas, contadores, enums), no con entidades JPA, sin `jakarta.persistence` ni Spring web; reciben un `java.time.Clock` inyectado. El servicio traduce entre entidad y dominio.
-- Interfaces (puertos) solo para fronteras externas reales: proveedor de mensajería y, más adelante, pasarela de pagos. El resto son servicios Spring normales.
+- Interfaces (puertos) solo para fronteras externas reales: proveedor de mensajería y, más adelante, pasarela de pagos. El resto son servicios Spring normales. ÚNICA excepción interna aprobada: `billing.api.CycleSessions` (ver "Puerto interno aprobado").
 - Las entidades JPA de negocio extienden `TenantScopedEntity`; no se duplica el modelo ni se crean mapeadores entre capas.
 - Errores de negocio: extender `common.ApiException` (status + código estable para el frontend).
 - `organization_id` solo está mapeado en `Coach`; ninguna consulta ni repositorio lo usa.
@@ -106,18 +105,38 @@ Pruebas ArchUnit (`ArchitectureTest`, corren con `mvn test`; verificadas introdu
 Pruebas: `mvn test` (unitarias + H2 + ArchUnit, rápidas) y `mvn verify` (añade las `*IT` con Testcontainers/PostgreSQL real: concurrencia de pagos e invitaciones, restricciones del esquema, aislamiento por recurso, RLS en todas las tablas salvo `flyway_schema_history`). `RealServerStatusCodesTest` usa un servidor real (puerto aleatorio) porque MockMvc NO simula el reenvío del contenedor a `/error`: sin `dispatcherTypeMatchers(ERROR).permitAll()` todo 403/400/404 se convertía en 401. Las entidades de prueba viven fuera de `com.coachplatform` (`testfixtures.*`) para no entrar al escaneo por defecto.
 
 ## Guion de prueba manual
-`scripts/demo-flow.sh` recorre con curl el flujo completo (plan, alumno, pago, ciclo activo, segundo pago rechazado, extensión y su tope, aceptar invitación, login del alumno, resumen). Usa datos inventados (un coach nuevo en cada corrida), así que solo contra una BD de desarrollo. `BASE_URL=http://127.0.0.1:8081 scripts/demo-flow.sh` (usar 127.0.0.1, no `localhost`, que puede resolver a `::1` y llegar a otro proyecto local). Probado contra un Postgres 17 desechable en Docker.
+`scripts/demo-flow.sh` recorre con curl el flujo completo (plan, disponibilidad, alumno, pago, ciclo activo, segundo pago rechazado, extensión y su tope, aceptar invitación, login del alumno, cupos, agendar, reagendar atómico, aislamiento entre alumnos, agenda, cancelar con motivo, ajustes, resumen). Usa datos inventados (un coach nuevo en cada corrida), así que solo contra una BD de desarrollo. `BASE_URL=http://127.0.0.1:8081 scripts/demo-flow.sh` (usar 127.0.0.1, no `localhost`, que puede resolver a `::1` y llegar a otro proyecto local). Probado contra un Postgres 17 desechable en Docker.
 
-## Pendientes para la Fase 3 (agenda)
-- Renovación el día de `end_date`: definir qué pasa con las clases YA AGENDADAS del ciclo viejo (hoy el ciclo viejo pasa a `EXPIRED` y las sobrantes se pierden; hay que decidir si las clases agendadas ese mismo día se respetan, se cancelan o se pasan al ciclo nuevo).
-- Un ciclo NO debe vencer mientras tenga clases pasadas sin marcar ("pendiente de marcar"): el entrenador primero las resuelve; si no, se descontarían o perderían clases sin haberlas decidido. Afecta a `CycleRules.evaluate`, a la lectura efectiva y al job.
-- Evaluar si se permite REABRIR un ciclo vencido (hoy `extend` solo funciona con ciclos activos).
-- `COMPLETED` se persiste al descontar la última clase (usar `CycleRules.consumeClass` bajo `StudentService.lockForUpdate`).
+## Agenda (Fase 3): reglas implementadas
+- Disponibilidad = ventanas semanales (hora local de Bogotá, `availability_rule`) cortadas en cupos de `coach_settings.class_duration_minutes` (15-180, por defecto 60); clases 1:1. `PUT /api/coach/availability` reemplaza todo y NUNCA cancela clases ya agendadas. Bloqueos (`availability_block`): al crearlos la respuesta LISTA las clases agendadas dentro; no las cancela.
+- Cambiar la duración solo afecta clases futuras: cada clase guarda su `ends_at` al agendarse, y un cupo nuevo no puede solaparse con una clase existente aunque sea más larga.
+- Solapes: restricción de exclusión `ex_class_session_no_overlap` (`btree_gist`, `tstzrange(starts_at, ends_at)` por `coach_id`, solo `SCHEDULED`). Verificada en Supabase (PG 17.11) y Testcontainers. Clases consecutivas sí se permiten.
+- Agendar: ciclo efectivamente activo, hora futura, el alumno con anticipación >= ventana de cancelación (el entrenador no), día (Bogotá) <= `end_date`, cupo de la rejilla, sin bloqueo, sin solape, `usadas + agendadas <= incluidas`.
+- Cancelación del ALUMNO (`/api/student/sessions/{id}/cancel`): solo `SCHEDULED`, antes de empezar y con >= `cancel_window_hours` (exactamente en el límite sí). Dentro de la ventana se RECHAZA y la clase sigue `SCHEDULED` (luego se marca asistida/inasistencia): no existe estado de "cancelación tardía". Con `newStartsAt` es ATÓMICO (original `RESCHEDULED` + nueva `SCHEDULED` con `rescheduled_from`; si el cupo nuevo es inválido no se cancela nada); sin él, `CANCELLED_ON_TIME` (la clase queda "debida" y se vuelve a agendar dentro del ciclo).
+- Cancelación del ENTRENADOR: siempre permitida (sin ventana, incluso ya empezada), motivo OBLIGATORIO, `CANCELLED_BY_COACH`, no descuenta; `newStartsAt` opcional y atómico. **Así se perdona una cancelación tardía del alumno**: el entrenador cancela esa misma clase con motivo (antes de marcarla).
+- Asistencia: desde la hora de inicio; `ATTENDED`/`NO_SHOW` descuentan 1 (la última cierra el ciclo `COMPLETED`). Se puede cambiar entre ambos mientras el ciclo esté activo (no cambia el conteo). **LIMITACIÓN CONOCIDA: marcar asistencia no se puede deshacer** (no hay vuelta a `SCHEDULED` ni cancelación posterior); si hay duda sobre perdonar una clase, cancelarla ANTES de marcarla.
+- Clases pendientes de marcar = `SCHEDULED` que ya empezaron. Un ciclo NO vence mientras las tenga (`CycleRules.evaluate(estado, pendientes)`), el job no lo cierra, y la RENOVACIÓN se bloquea con `409 PENDING_SESSIONS_TO_MARK` cuya respuesta LISTA las clases (`details.pendingSessions`). `/billing/overview` y `CycleSummary` incluyen `pendingMarks`.
+- Renovación el día de `end_date`: las clases del ciclo viejo que aún no empiezan pasan al ciclo nuevo y cuentan contra SU cupo; si no caben en el plan nuevo, `422 TRANSFER_EXCEEDS_PLAN` y no cambia nada.
+- Reabrir: `extend` sobre un ciclo `EXPIRED` lo vuelve `ACTIVE`. Exige motivo, nueva fecha >= hoy, respetar el tope sobre `original_end_date`, ser el ÚLTIMO ciclo del alumno (si hay uno más nuevo: `REOPEN_NOT_ALLOWED`) y no haber cerrado `COMPLETED`. Queda en `cycle_extension` con `reopened = true`.
+- Ajustes del entrenador: `GET/PUT /api/coach/settings` (ventana de cancelación 0-48 h, duración 15-180 min, "por vencer" días 0-60 / clases 0-100, tope de extensión 0-365 días), validados en la API y con CHECK en la base.
+- `/api/student/**` (rol STUDENT) identifica al alumno SIEMPRE por el token (`student.user_id`), ningún endpoint recibe un id de alumno; la clase de otro alumno responde 404 igual que una inexistente. Las vistas del propio alumno no incluyen nombres.
+
+## Orden de bloqueo (obligatorio, anti-deadlock)
+1. Primero la fila del ALUMNO (`StudentService.lockForUpdate`, `SELECT ... FOR UPDATE`).
+2. Luego, si se van a crear/mover clases, el CALENDARIO del entrenador (`CoachService.lockCalendar`: la fila de `coach_settings`).
+3. Después las filas de ciclo/clase.
+Lecciones aprendidas con Postgres real: (a) leer la entidad ANTES de bloquear deja una copia obsoleta en la caché de Hibernate (marcar y cancelar a la vez tenían éxito los dos): se obtiene primero el id del alumno con una consulta de proyección (`findStudentIdById`, sin cargar la entidad), se bloquea y SOLO ENTONCES se lee; (b) sin el bloqueo del calendario, dos alumnos por el mismo cupo provocan `deadlock detected` por la restricción de exclusión en vez de un rechazo limpio.
+
+## Puerto interno aprobado (única excepción)
+`billing.api.CycleSessions` (implementada por `scheduling.SchedulingCycleSessions`) es la ÚNICA interfaz interna entre módulos: billing necesita saber de las clases de un ciclo (pendientes, futuras, trasladarlas) y scheduling ya depende de billing; la interfaz evita una dependencia circular. ArchUnit solo permite esa interfaz en paquetes `api`, solo la implementa `scheduling`, y no se admiten otras. Todo lo demás son servicios Spring normales.
+
+## Zona horaria y tipos de fecha
+No usar `hibernate.jdbc.time_zone`: desplaza los `LocalTime` (disponibilidad semanal) por el desfase UTC/JVM y viola el CHECK en Postgres real (H2 lo ocultaba porque la ida y vuelta era simétrica). Los `Instant` van como `timestamptz` en UTC; `LocalDate`/`LocalTime` son valores de calendario/reloj de pared de Bogotá. `RealServerStatusCodesTest` y las `*IT` existen porque MockMvc/H2 no detectan estas clases de error.
 
 ## Fases (una a la vez; esperar visto bueno del usuario)
 1. Repo, CLAUDE.md, conexión Supabase, auth y multi-tenant. La migración V1 incluye `organization` y `coach.organization_id` nullable.
 2. Planes, alumnos, pagos y ciclos + pruebas.
-3. Agenda, disponibilidad, cancelación/reagendado.
+3. Agenda, disponibilidad, cancelación/reagendado. (Implementada; pendiente de visto bueno.)
 4. Vista del alumno (PWA) y marca.
 5. Notificaciones WhatsApp y alertas de vencimiento.
 6. Pulido y piloto (2–4 semanas).

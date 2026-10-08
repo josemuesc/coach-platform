@@ -41,6 +41,11 @@ public record CycleState(LocalDate startDate, LocalDate endDate, LocalDate origi
         return new CycleState(startDate, endDate, originalEndDate, classesIncluded, classesUsed, CycleStatus.EXPIRED, null);
     }
 
+    /** An expired cycle brought back to life with a new deadline. */
+    CycleState reopened(LocalDate newEnd) {
+        return new CycleState(startDate, newEnd, originalEndDate, classesIncluded, classesUsed, CycleStatus.ACTIVE, null);
+    }
+
     CycleState withClassesUsed(int used) {
         return new CycleState(startDate, endDate, originalEndDate, classesIncluded, used, status, completedOn);
     }

@@ -9,7 +9,10 @@ public class CycleRuleException extends RuntimeException {
         CYCLE_NOT_ACTIVE,
         INVALID_EXTENSION,
         EXTENSION_LIMIT_EXCEEDED,
-        INVALID_PLAN
+        INVALID_PLAN,
+        PENDING_SESSIONS_TO_MARK,
+        TRANSFER_EXCEEDS_PLAN,
+        REOPEN_NOT_ALLOWED
     }
 
     private final Code code;

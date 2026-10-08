@@ -38,16 +38,20 @@ class CycleExtensionRecord extends TenantScopedEntity {
     @Column(name = "extended_at", nullable = false, updatable = false)
     private Instant extendedAt;
 
+    @Column(nullable = false, updatable = false)
+    private boolean reopened;
+
     protected CycleExtensionRecord() {
     }
 
     CycleExtensionRecord(UUID cycleId, LocalDate previousEndDate, LocalDate newEndDate, String reason,
-                         UUID extendedBy, Instant extendedAt) {
+                         UUID extendedBy, Instant extendedAt, boolean reopened) {
         this.cycleId = cycleId;
         this.previousEndDate = previousEndDate;
         this.newEndDate = newEndDate;
         this.reason = reason;
         this.extendedBy = extendedBy;
         this.extendedAt = extendedAt;
+        this.reopened = reopened;
     }
 }

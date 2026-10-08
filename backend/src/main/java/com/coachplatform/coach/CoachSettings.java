@@ -27,6 +27,9 @@ public class CoachSettings {
     @Column(name = "max_extension_days", nullable = false)
     private int maxExtensionDays = 60;
 
+    @Column(name = "class_duration_minutes", nullable = false)
+    private int classDurationMinutes = 60;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -42,4 +45,14 @@ public class CoachSettings {
     public int getExpiringSoonDays() { return expiringSoonDays; }
     public int getExpiringSoonClasses() { return expiringSoonClasses; }
     public int getMaxExtensionDays() { return maxExtensionDays; }
+    public int getClassDurationMinutes() { return classDurationMinutes; }
+
+    public void update(int cancelWindowHours, int classDurationMinutes, int expiringSoonDays, int expiringSoonClasses,
+                       int maxExtensionDays) {
+        this.cancelWindowHours = cancelWindowHours;
+        this.classDurationMinutes = classDurationMinutes;
+        this.expiringSoonDays = expiringSoonDays;
+        this.expiringSoonClasses = expiringSoonClasses;
+        this.maxExtensionDays = maxExtensionDays;
+    }
 }
