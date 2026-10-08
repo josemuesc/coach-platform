@@ -4,7 +4,8 @@
 #   register coach -> plan -> weekly availability -> student (+ invitation) -> payment -> active cycle -> second payment
 #   rejected -> extension (and the 60-day cap) -> student accepts the invitation and logs in
 #   -> student sees slots, books, reschedules atomically, cannot touch another student's class
-#   -> coach agenda, cancels with a reason, attendance rules -> settings -> billing overview
+#   -> personalized vs semi-personalized events: sharing, modality mismatch, capacity, full event, coach override
+#   -> coach agenda with attendees, cancels one place / a whole event, attendance rules -> settings -> billing overview
 #
 # Usage:   scripts/demo-flow.sh                        # backend on http://127.0.0.1:8080
 #          BASE_URL=http://127.0.0.1:8081 scripts/demo-flow.sh
@@ -64,6 +65,23 @@ show() {
 
 step() { echo; echo "== $1"; }
 
+# make_student NAME PLAN_ID  -> creates the student, accepts the invitation, pays and logs in.
+# Sets STUDENT_ID_X, STUDENT_TOKEN_X, STUDENT_EMAIL_X (X = the first word of NAME in upper case)
+make_student() {
+  local name="$1" plan="$2" key email password="Demo-${1%% *}-Pass-1"
+  key="$(echo "${name%% *}" | tr '[:lower:]' '[:upper:]')"
+  email="$(echo "${name%% *}" | tr '[:upper:]' '[:lower:]').demo.${RUN_ID}@example.com"
+  req POST /api/coach/students "{\"fullName\":\"$name\",\"email\":\"$email\"}" "$COACH_TOKEN"; expect 201
+  local sid invite
+  sid="$(jget student.id)"; invite="$(jget inviteUrl)"
+  req POST /api/invitations/accept "{\"token\":\"${invite##*/}\",\"password\":\"$password\"}"; expect 200
+  req POST "/api/coach/students/$sid/payments" "{\"planId\":\"$plan\",\"method\":\"CASH\",\"amountCop\":400000}" "$COACH_TOKEN"; expect 201
+  req POST /api/auth/login "{\"email\":\"$email\",\"password\":\"$password\"}"; expect 200
+  printf -v "STUDENT_ID_$key" '%s' "$sid"
+  printf -v "STUDENT_TOKEN_$key" '%s' "$(jget token)"
+  printf -v "STUDENT_EMAIL_$key" '%s' "$email"
+}
+
 # slot DAYS HH:MM  -> the UTC instant of that wall-clock time in Bogota, DAYS from today
 slot() {
   python3 -c '
@@ -96,11 +114,19 @@ expect 201
 COACH_TOKEN="$(jget token)"
 echo "  coach: $COACH_EMAIL   role: $(jget role)   token: <hidden>"
 
-step "2. Create a plan: 8 classes, 520.000 COP (POST /api/coach/plans)"
+step "2. Create plans: the modality is mandatory (POST /api/coach/plans)"
 req POST /api/coach/plans '{"name":"8 clases","classesIncluded":8,"priceCop":520000}' "$COACH_TOKEN"
+expect 400
+echo "  a plan without modality is rejected: HTTP $STATUS"
+req POST /api/coach/plans '{"name":"8 clases personalizado","classesIncluded":8,"priceCop":520000,"modality":"PERSONALIZED"}' "$COACH_TOKEN"
 expect 201
 PLAN_ID="$(jget id)"
 show
+req POST /api/coach/plans '{"name":"8 clases grupal","classesIncluded":8,"priceCop":320000,"modality":"SEMI_PERSONALIZED"}' "$COACH_TOKEN"
+expect 201
+SEMI_PLAN_ID="$(jget id)"
+echo "  semi-personalized plan: $SEMI_PLAN_ID"
+
 
 step "2b. Set the weekly availability: every day 06:00-20:00 (PUT /api/coach/availability)"
 WINDOWS='['
@@ -121,6 +147,9 @@ echo "  invite link: ${INVITE_URL%/*}/<hidden-token>   (expires $(jget inviteExp
 
 step "4. Register the student's payment: opens the cycle (POST /api/coach/students/{id}/payments)"
 req POST "/api/coach/students/$STUDENT_ID/payments" "{\"planId\":\"$PLAN_ID\",\"method\":\"NEQUI\"}" "$COACH_TOKEN"
+expect 400
+echo "  a payment without amountCop is rejected: HTTP $STATUS (the amount really received is always stated)"
+req POST "/api/coach/students/$STUDENT_ID/payments" "{\"planId\":\"$PLAN_ID\",\"method\":\"NEQUI\",\"amountCop\":520000}" "$COACH_TOKEN"
 expect 201
 CYCLE_ID="$(jget cycleId)"
 CYCLE_END="$(jget endDate)"
@@ -132,7 +161,7 @@ expect 200
 show
 
 step "6. A second payment while the cycle is active is rejected (expect 409 ACTIVE_CYCLE_EXISTS)"
-req POST "/api/coach/students/$STUDENT_ID/payments" "{\"planId\":\"$PLAN_ID\",\"method\":\"CASH\"}" "$COACH_TOKEN"
+req POST "/api/coach/students/$STUDENT_ID/payments" "{\"planId\":\"$PLAN_ID\",\"method\":\"CASH\",\"amountCop\":520000}" "$COACH_TOKEN"
 expect 409
 show
 
@@ -172,53 +201,85 @@ req GET /api/coach/plans "" "$STUDENT_TOKEN"
 expect 403
 echo "  a student cannot use coach endpoints: HTTP $STATUS"
 
-step "10. The student sees the free slots of the next days (GET /api/student/slots)"
+step "10. The student sees the free blocks of the next days, with their modality and occupancy (GET /api/student/slots)"
 req GET "/api/student/slots?from=$(day 3)&to=$(day 5)" "" "$STUDENT_TOKEN"
 expect 200
-echo "  free slots between $(day 3) and $(day 5): $(echo "$BODY" | python3 -c 'import sys,json; print(len(json.load(sys.stdin)))')"
+echo "$BODY" | python3 -c '
+import sys, json
+slots = json.load(sys.stdin)
+print("  blocks offered:", len(slots), "| first:", {k: slots[0][k] for k in ("localDate", "localTime", "modality", "capacity", "occupied")})'
 
-step "11. The student books two classes (POST /api/student/sessions)"
+step "11. Ana (personalized plan) books two classes: each creates an event of capacity 1 (POST /api/student/sessions)"
 CLASS_A_AT="$(slot 3 10:00)"
 CLASS_B_AT="$(slot 4 10:00)"
 req POST /api/student/sessions "{\"startsAt\":\"$CLASS_A_AT\"}" "$STUDENT_TOKEN"
 expect 201
 CLASS_A_ID="$(jget id)"
-echo "  class A: $(jget startsAt) -> $(jget endsAt)  [$(jget status)]"
+echo "  class A: $(jget startsAt)  [$(jget status)]  $(jget modality) $(jget occupied)/$(jget capacity)"
 req POST /api/student/sessions "{\"startsAt\":\"$CLASS_B_AT\"}" "$STUDENT_TOKEN"
 expect 201
 CLASS_B_ID="$(jget id)"
-echo "  class B: $(jget startsAt) -> $(jget endsAt)  [$(jget status)]"
+echo "  class B: $(jget startsAt)  [$(jget status)]  $(jget modality) $(jget occupied)/$(jget capacity)"
 
 step "11b. A time that is not on the coach's grid is refused (expect 422 NOT_AVAILABLE)"
 req POST /api/student/sessions "{\"startsAt\":\"$(slot 3 10:30)\"}" "$STUDENT_TOKEN"
 expect 422
 show
 
-step "12. Another student takes a slot that is already booked: 409 SLOT_TAKEN (and cannot touch Ana's class)"
-BETO_EMAIL="beto.demo.${RUN_ID}@example.com"
-BETO_PASSWORD="Demo-Beto-Pass-1"          # fake, for this script only
-req POST /api/coach/students "{\"fullName\":\"Beto Demo\",\"email\":\"$BETO_EMAIL\"}" "$COACH_TOKEN"
-expect 201
-BETO_ID="$(jget student.id)"
-BETO_INVITE="$(jget inviteUrl)"
-req POST /api/invitations/accept "{\"token\":\"${BETO_INVITE##*/}\",\"password\":\"$BETO_PASSWORD\"}"
-expect 200
-req POST "/api/coach/students/$BETO_ID/payments" "{\"planId\":\"$PLAN_ID\",\"method\":\"CASH\"}" "$COACH_TOKEN"
-expect 201
-req POST /api/auth/login "{\"email\":\"$BETO_EMAIL\",\"password\":\"$BETO_PASSWORD\"}"
-expect 200
-BETO_TOKEN="$(jget token)"
-req POST /api/student/sessions "{\"startsAt\":\"$CLASS_A_AT\"}" "$BETO_TOKEN"
+step "12. Another PERSONALIZED student cannot take Ana's block (409 SLOT_TAKEN) nor touch her class (404)"
+make_student "Beto Demo" "$PLAN_ID"
+req POST /api/student/sessions "{\"startsAt\":\"$CLASS_A_AT\"}" "$STUDENT_TOKEN_BETO"
 expect 409
 show
-req POST "/api/student/sessions/$CLASS_A_ID/cancel" "{}" "$BETO_TOKEN"
+req POST "/api/student/sessions/$CLASS_A_ID/cancel" "{}" "$STUDENT_TOKEN_BETO"
 expect 404
 echo "  Beto cancelling Ana's class: HTTP $STATUS (a plain 404: nothing is revealed)"
-req GET /api/student/sessions "" "$BETO_TOKEN"
-expect 200
-echo "  Beto's own classes: $(echo "$BODY" | python3 -c 'import sys,json; print(len(json.load(sys.stdin)))')"
 
-step "13. The student moves class B to another day in ONE step (POST .../cancel with newStartsAt)"
+step "12b. Two SEMI-PERSONALIZED students SHARE one event (Carla creates it, Dani joins): occupied 2 of 4"
+make_student "Carla Demo" "$SEMI_PLAN_ID"
+make_student "Dani Demo" "$SEMI_PLAN_ID"
+GROUP_AT="$(slot 3 15:00)"
+req POST /api/student/sessions "{\"startsAt\":\"$GROUP_AT\"}" "$STUDENT_TOKEN_CARLA"
+expect 201
+EVENT_ID="$(jget eventId)"
+echo "  Carla creates the event: $(jget modality) $(jget occupied)/$(jget capacity)"
+req GET "/api/student/slots?from=$(day 3)&to=$(day 3)" "" "$STUDENT_TOKEN_DANI"
+echo "  Dani is offered it: $(echo "$BODY" | python3 -c '
+import sys, json
+for s in json.load(sys.stdin):
+    if s["eventId"]: print(s["localTime"], s["modality"], str(s["occupied"]) + "/" + str(s["capacity"]))')"
+req POST /api/student/sessions "{\"startsAt\":\"$GROUP_AT\"}" "$STUDENT_TOKEN_DANI"
+expect 201
+echo "  Dani joins the SAME event ($(jget eventId | grep -q "$EVENT_ID" && echo yes || echo NO)): $(jget occupied)/$(jget capacity)"
+
+step "12c. A personalized student cannot join a semi event (409 MODALITY_MISMATCH) and is not even offered it"
+req POST /api/student/sessions "{\"startsAt\":\"$GROUP_AT\"}" "$STUDENT_TOKEN_BETO"
+expect 409
+show
+req GET "/api/student/slots?from=$(day 3)&to=$(day 3)" "" "$STUDENT_TOKEN_BETO"
+echo "  does Beto's list contain that block? $(echo "$BODY" | python3 -c '
+import sys, json
+print("yes" if any(s["eventId"] for s in json.load(sys.stdin)) else "no")')"
+
+step "12d. The coach reduces the event's capacity to 2: a third student gets EVENT_FULL; the coach can override with a reason"
+req PUT "/api/coach/events/$EVENT_ID/capacity" '{"capacity":2}' "$COACH_TOKEN"
+expect 200
+echo "  capacity now $(jget capacity), free seats $(jget freeSeats)"
+req PUT "/api/coach/events/$EVENT_ID/capacity" '{"capacity":1}' "$COACH_TOKEN"
+expect 400
+echo "  capacity 1 is out of range (2-10): HTTP $STATUS"
+make_student "Eva Demo" "$SEMI_PLAN_ID"
+req POST /api/student/sessions "{\"startsAt\":\"$GROUP_AT\"}" "$STUDENT_TOKEN_EVA"
+expect 409
+show
+req POST "/api/coach/students/$STUDENT_ID_EVA/sessions" "{\"startsAt\":\"$GROUP_AT\",\"override\":true}" "$COACH_TOKEN"
+expect 422
+echo "  override without a reason: HTTP $STATUS ($(jget code))"
+req POST "/api/coach/students/$STUDENT_ID_EVA/sessions" "{\"startsAt\":\"$GROUP_AT\",\"override\":true,\"overrideReason\":\"Eva pidio quedarse (demo)\"}" "$COACH_TOKEN"
+expect 201
+echo "  override accepted: override=$(jget override), reason: $(jget overrideReason)"
+
+step "13. Ana moves class B to another day in ONE step (POST .../cancel with newStartsAt)"
 NEW_B_AT="$(slot 5 10:00)"
 req POST "/api/student/sessions/$CLASS_B_ID/cancel" "{\"newStartsAt\":\"$NEW_B_AT\"}" "$STUDENT_TOKEN"
 expect 200
@@ -229,29 +290,36 @@ req POST "/api/student/sessions/$CLASS_A_ID/cancel" "{\"newStartsAt\":\"$(slot 7
 expect 422
 show
 req GET /api/student/sessions "" "$STUDENT_TOKEN"
-echo "  Ana's classes by status: $(echo "$BODY" | python3 -c 'import sys,json,collections; print(dict(collections.Counter(s["status"] for s in json.load(sys.stdin))))')"
+echo "  Ana's places by status: $(echo "$BODY" | python3 -c 'import sys,json,collections; print(dict(collections.Counter(s["status"] for s in json.load(sys.stdin))))')"
 
-step "14. The coach's agenda for the next days (GET /api/coach/agenda)"
+step "14. The coach's agenda: events with their attendees and free seats (GET /api/coach/agenda)"
 req GET "/api/coach/agenda?from=$(day 3)&to=$(day 5)" "" "$COACH_TOKEN"
 expect 200
 echo "$BODY" | python3 -c '
 import sys, json
 a = json.load(sys.stdin)
-print("  classes:", [(s["studentName"], s["status"], s["startsAt"]) for s in a["sessions"]])
-print("  free slots:", len(a["freeSlots"]))'
+for e in a["events"]:
+    who = [(x["studentName"], x["status"], "OVERRIDE" if x["override"] else "") for x in e["attendees"]]
+    print("  ", e["modality"], str(e["occupied"]) + "/" + str(e["capacity"]), "free:", e["freeSeats"], who)
+print("   empty blocks:", len(a["freeBlocks"]))'
 
 step "15. A class that has not started cannot be marked (expect 409 CLASS_NOT_STARTED)"
-req POST "/api/coach/sessions/$CLASS_A_ID/attendance" '{"result":"ATTENDED"}' "$COACH_TOKEN"
+req POST "/api/coach/attendances/$CLASS_A_ID/mark" '{"result":"ATTENDED"}' "$COACH_TOKEN"
 expect 409
 show
 
-step "16. The coach cancels a class: the reason is mandatory (400 without it), no class is deducted"
-req POST "/api/coach/sessions/$CLASS_A_ID/cancel" '{"reason":"   "}' "$COACH_TOKEN"
+step "16. The coach cancels ONE place (reason mandatory) and then the WHOLE group event; nobody is charged"
+req POST "/api/coach/attendances/$CLASS_A_ID/cancel" '{"reason":"   "}' "$COACH_TOKEN"
 expect 400
 echo "  without a reason: HTTP $STATUS"
-req POST "/api/coach/sessions/$CLASS_A_ID/cancel" '{"reason":"Entrenador enfermo (demo)"}' "$COACH_TOKEN"
+req POST "/api/coach/attendances/$CLASS_A_ID/cancel" '{"reason":"Entrenador enfermo (demo)"}' "$COACH_TOKEN"
 expect 200
-echo "  cancelled as: $(jget cancelled.status)"
+echo "  Ana's place: $(jget cancelled.status)"
+req POST "/api/coach/events/$EVENT_ID/cancel" '{"reason":"Cierre del gimnasio (demo)"}' "$COACH_TOKEN"
+expect 200
+echo "  event: $(jget event.status); students affected: $(echo "$BODY" | python3 -c '
+import sys, json
+print([a["studentName"] for a in json.load(sys.stdin)["affectedStudents"]])')"
 req GET "/api/coach/students/$STUDENT_ID/cycles/active" "" "$COACH_TOKEN"
 echo "  classes used by Ana's cycle: $(jget classesUsed) of $(jget classesIncluded)"
 
@@ -259,9 +327,12 @@ step "17. The coach's settings, with their validated ranges (GET/PUT /api/coach/
 req GET /api/coach/settings "" "$COACH_TOKEN"
 expect 200
 show
-req PUT /api/coach/settings '{"cancelWindowHours":49,"classDurationMinutes":60,"expiringSoonDays":5,"expiringSoonClasses":1,"maxExtensionDays":60}' "$COACH_TOKEN"
+req PUT /api/coach/settings '{"cancelWindowHours":49,"classDurationMinutes":60,"expiringSoonDays":5,"expiringSoonClasses":1,"maxExtensionDays":60,"defaultGroupCapacity":4}' "$COACH_TOKEN"
 expect 400
 echo "  a 49-hour cancellation window is rejected: HTTP $STATUS (allowed range is 0-48)"
+req PUT /api/coach/settings '{"cancelWindowHours":2,"classDurationMinutes":60,"expiringSoonDays":5,"expiringSoonClasses":1,"maxExtensionDays":60,"defaultGroupCapacity":11}' "$COACH_TOKEN"
+expect 400
+echo "  a default group capacity of 11 is rejected: HTTP $STATUS (allowed range is 2-10)"
 
 step "18. Billing overview for the coach (GET /api/coach/billing/overview)"
 req GET /api/coach/billing/overview "" "$COACH_TOKEN"

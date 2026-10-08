@@ -1,6 +1,7 @@
 package com.coachplatform.scheduling;
 
-import com.coachplatform.scheduling.api.SessionStatus;
+import com.coachplatform.billing.api.Modality;
+import com.coachplatform.scheduling.api.EventStatus;
 import com.coachplatform.tenant.TenantScopedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,7 +14,10 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-/** Persistence shell of a class. The rules live in {@code scheduling.domain}. ends_at is fixed when it is booked. */
+/**
+ * The coach's EVENT: a time slot that one student (personalized) or several (semi-personalized) share. Its end,
+ * modality and capacity are fixed when it is created; only the capacity of a semi event can be changed by the coach.
+ */
 @Entity
 @Table(name = "class_session")
 class ClassSession extends TenantScopedEntity {
@@ -22,13 +26,6 @@ class ClassSession extends TenantScopedEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "student_id", nullable = false, updatable = false)
-    private UUID studentId;
-
-    /** Updatable: on a renewal the classes that have not started yet move to the new cycle. */
-    @Column(name = "cycle_id", nullable = false)
-    private UUID cycleId;
-
     @Column(name = "starts_at", nullable = false, updatable = false)
     private Instant startsAt;
 
@@ -36,11 +33,15 @@ class ClassSession extends TenantScopedEntity {
     private Instant endsAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private SessionStatus status = SessionStatus.SCHEDULED;
+    @Column(nullable = false, updatable = false)
+    private Modality modality;
 
-    @Column(name = "rescheduled_from", updatable = false)
-    private UUID rescheduledFrom;
+    @Column(nullable = false)
+    private int capacity;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private EventStatus status = EventStatus.SCHEDULED;
 
     @Column(name = "cancelled_by")
     private UUID cancelledBy;
@@ -51,12 +52,6 @@ class ClassSession extends TenantScopedEntity {
     @Column(name = "cancel_reason")
     private String cancelReason;
 
-    @Column(name = "marked_by")
-    private UUID markedBy;
-
-    @Column(name = "marked_at")
-    private Instant markedAt;
-
     @Column(name = "created_by", nullable = false, updatable = false)
     private UUID createdBy;
 
@@ -66,38 +61,27 @@ class ClassSession extends TenantScopedEntity {
     protected ClassSession() {
     }
 
-    ClassSession(UUID studentId, UUID cycleId, Instant startsAt, Instant endsAt, UUID rescheduledFrom, UUID createdBy) {
-        this.studentId = studentId;
-        this.cycleId = cycleId;
+    ClassSession(Instant startsAt, Instant endsAt, Modality modality, int capacity, UUID createdBy) {
         this.startsAt = startsAt;
         this.endsAt = endsAt;
-        this.rescheduledFrom = rescheduledFrom;
+        this.modality = modality;
+        this.capacity = capacity;
         this.createdBy = createdBy;
     }
 
     UUID getId() { return id; }
-    UUID getStudentId() { return studentId; }
-    UUID getCycleId() { return cycleId; }
     Instant getStartsAt() { return startsAt; }
     Instant getEndsAt() { return endsAt; }
-    SessionStatus getStatus() { return status; }
-    UUID getRescheduledFrom() { return rescheduledFrom; }
-    String getCancelReason() { return cancelReason; }
+    Modality getModality() { return modality; }
+    int getCapacity() { return capacity; }
+    EventStatus getStatus() { return status; }
 
-    void cancel(SessionStatus newStatus, UUID by, String reason, Instant now) {
-        this.status = newStatus;
+    void setCapacity(int capacity) { this.capacity = capacity; }
+
+    void cancel(UUID by, String reason, Instant now) {
+        this.status = EventStatus.CANCELLED;
         this.cancelledBy = by;
         this.cancelledAt = now;
         this.cancelReason = reason;
-    }
-
-    void mark(SessionStatus newStatus, UUID by, Instant now) {
-        this.status = newStatus;
-        this.markedBy = by;
-        this.markedAt = now;
-    }
-
-    void moveToCycle(UUID newCycleId) {
-        this.cycleId = newCycleId;
     }
 }

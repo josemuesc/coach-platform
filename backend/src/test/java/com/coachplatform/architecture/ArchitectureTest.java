@@ -306,6 +306,37 @@ class ArchitectureTest {
         }
     }
 
+    // ---- request bodies are strict ------------------------------------------------------------------
+
+    @Test
+    void requestBodiesHaveNoPrimitiveComponents() {
+        fields().that().areDeclaredInClassesThat(DescribedPredicate.describe(
+                        "are HTTP request bodies (records outside ..domain.. named *Command, *Input, *Request, *Item or UpdateCoachSettings)",
+                        (JavaClass c) -> c.isRecord() && !c.getPackageName().contains(".domain") && (c.getSimpleName().endsWith("Command") || c.getSimpleName().endsWith("Input")
+                                || c.getSimpleName().endsWith("Request") || c.getSimpleName().endsWith("Item")
+                                || c.getSimpleName().equals("UpdateCoachSettings"))))
+                .and().areNotStatic()
+                .should(new ArchCondition<com.tngtech.archunit.core.domain.JavaField>("not be a primitive: use Integer/Long/Boolean, "
+                        + "@NotNull when mandatory or an explicit default when optional") {
+                    @Override
+                    public void check(com.tngtech.archunit.core.domain.JavaField f, ConditionEvents events) {
+                        if (f.getRawType().isPrimitive()) {
+                            events.add(SimpleConditionEvent.violated(f, f.getFullName() + " is a primitive ("
+                                    + f.getRawType().getName() + "): an absent value would silently become 0/false"));
+                        }
+                    }
+                })
+                .allowEmptyShould(true)
+                .check(classes);
+    }
+
+    @Test
+    void thereAreRequestBodiesForTheRuleToCheck() {
+        long requestBodies = classes.stream().filter(c -> c.isRecord() && !c.getPackageName().contains(".domain") && (c.getSimpleName().endsWith("Command")
+                || c.getSimpleName().endsWith("Input") || c.getSimpleName().endsWith("Request"))).count();
+        assertThat(requestBodies).as("the rule above is not vacuous").isGreaterThan(10);
+    }
+
     // ---- sanity: the rules above are not vacuous ------------------------------------------------
 
     @Test
@@ -314,7 +345,7 @@ class ArchitectureTest {
         assertThat(classes.contain(com.coachplatform.auth.AuthService.class)).isTrue();
         assertThat(classes.contain(com.coachplatform.billing.BillingService.class)).isTrue();
         assertThat(classes.contain(com.coachplatform.students.StudentService.class)).isTrue();
-        assertThat(classes.contain(com.coachplatform.scheduling.SchedulingService.class)).isTrue();
+        assertThat(classes.contain("com.coachplatform.scheduling.SchedulingService")).isTrue();
         assertThat(classes.contain(com.coachplatform.billing.api.CycleSessions.class)).isTrue();
         assertThat(classes.stream().filter(c -> c.isAnnotatedWith(CrossTenantAccess.class)).count()).isEqualTo(2);
     }

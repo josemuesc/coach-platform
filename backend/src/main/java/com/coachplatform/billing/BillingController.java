@@ -10,6 +10,7 @@ import com.coachplatform.billing.api.RegisterPaymentCommand;
 import com.coachplatform.billing.api.StudentBillingOverview;
 import com.coachplatform.security.AuthPrincipal;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -37,7 +38,7 @@ class BillingController {
         this.billing = billing;
     }
 
-    record ActiveRequest(boolean active) {
+    record ActiveRequest(@NotNull Boolean active) {
     }
 
     // ---- plans ----
@@ -58,7 +59,7 @@ class BillingController {
     }
 
     @PatchMapping("/plans/{id}/active")
-    PlanSummary setPlanActive(@PathVariable UUID id, @RequestBody ActiveRequest req) {
+    PlanSummary setPlanActive(@PathVariable UUID id, @Valid @RequestBody ActiveRequest req) {
         return plans.setActive(id, req.active());
     }
 

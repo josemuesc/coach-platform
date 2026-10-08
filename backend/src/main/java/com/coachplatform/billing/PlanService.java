@@ -24,7 +24,7 @@ public class PlanService {
         if (plans.existsByNameIgnoreCase(name)) {
             throw new ApiException(HttpStatus.CONFLICT, "PLAN_NAME_EXISTS");
         }
-        return toSummary(plans.save(new Plan(name, input.classesIncluded(), input.priceCop())));
+        return toSummary(plans.save(new Plan(name, input.classesIncluded(), input.priceCop(), input.modality())));
     }
 
     @Transactional(readOnly = true)
@@ -39,7 +39,7 @@ public class PlanService {
         if (plans.existsByNameIgnoreCaseAndIdNot(name, planId)) {
             throw new ApiException(HttpStatus.CONFLICT, "PLAN_NAME_EXISTS");
         }
-        plan.update(name, input.classesIncluded(), input.priceCop());
+        plan.update(name, input.classesIncluded(), input.priceCop(), input.modality());
         return toSummary(plan);
     }
 
@@ -51,6 +51,6 @@ public class PlanService {
     }
 
     private static PlanSummary toSummary(Plan p) {
-        return new PlanSummary(p.getId(), p.getName(), p.getClassesIncluded(), p.getPriceCop(), p.isActive());
+        return new PlanSummary(p.getId(), p.getName(), p.getClassesIncluded(), p.getPriceCop(), p.isActive(), p.getModality());
     }
 }

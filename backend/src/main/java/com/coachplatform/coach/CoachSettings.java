@@ -30,6 +30,9 @@ public class CoachSettings {
     @Column(name = "class_duration_minutes", nullable = false)
     private int classDurationMinutes = 60;
 
+    @Column(name = "default_group_capacity", nullable = false)
+    private int defaultGroupCapacity = 4;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -46,9 +49,11 @@ public class CoachSettings {
     public int getExpiringSoonClasses() { return expiringSoonClasses; }
     public int getMaxExtensionDays() { return maxExtensionDays; }
     public int getClassDurationMinutes() { return classDurationMinutes; }
+    public int getDefaultGroupCapacity() { return defaultGroupCapacity; }
 
     public void update(int cancelWindowHours, int classDurationMinutes, int expiringSoonDays, int expiringSoonClasses,
-                       int maxExtensionDays) {
+                       int maxExtensionDays, int defaultGroupCapacity) {
+        this.defaultGroupCapacity = defaultGroupCapacity;
         this.cancelWindowHours = cancelWindowHours;
         this.classDurationMinutes = classDurationMinutes;
         this.expiringSoonDays = expiringSoonDays;

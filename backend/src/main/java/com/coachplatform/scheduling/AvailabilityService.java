@@ -4,20 +4,14 @@ import com.coachplatform.common.ApiException;
 import com.coachplatform.scheduling.api.BlockCreated;
 import com.coachplatform.scheduling.api.BlockInput;
 import com.coachplatform.scheduling.api.BlockSummary;
-import com.coachplatform.scheduling.api.SessionSummary;
 import com.coachplatform.scheduling.api.WindowInput;
 import com.coachplatform.scheduling.api.WindowView;
-import com.coachplatform.students.StudentService;
-import com.coachplatform.students.api.StudentSummary;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,15 +22,15 @@ public class AvailabilityService {
 
     private final AvailabilityRuleRepository rules;
     private final AvailabilityBlockRepository blocks;
-    private final ClassSessionRepository sessions;
-    private final StudentService students;
+    private final ClassSessionRepository events;
+    private final SchedulingViews views;
 
-    AvailabilityService(AvailabilityRuleRepository rules, AvailabilityBlockRepository blocks,
-                        ClassSessionRepository sessions, StudentService students) {
+    AvailabilityService(AvailabilityRuleRepository rules, AvailabilityBlockRepository blocks, ClassSessionRepository events,
+                        SchedulingViews views) {
         this.rules = rules;
         this.blocks = blocks;
-        this.sessions = sessions;
-        this.students = students;
+        this.events = events;
+        this.views = views;
     }
 
     @Transactional(readOnly = true)
@@ -81,7 +75,7 @@ public class AvailabilityService {
         return blocks.findOverlapping(from, to).stream().map(AvailabilityService::summary).toList();
     }
 
-    /** Creates the block and LISTS the classes already booked inside it; it does not cancel them. */
+    /** Creates the block and LISTS the events already booked inside it (with their attendees); it does not cancel anything. */
     @Transactional
     public BlockCreated createBlock(BlockInput input, UUID createdBy) {
         if (!input.endsAt().isAfter(input.startsAt())) {
@@ -89,10 +83,7 @@ public class AvailabilityService {
         }
         AvailabilityBlock block = blocks.save(new AvailabilityBlock(input.startsAt(), input.endsAt(),
                 input.reason() == null || input.reason().isBlank() ? null : input.reason().trim(), createdBy));
-        Map<UUID, String> names = students.list().stream().collect(Collectors.toMap(StudentSummary::id, StudentSummary::fullName));
-        List<SessionSummary> affected = sessions.findScheduledOverlapping(input.startsAt(), input.endsAt()).stream()
-                .map(s -> SchedulingService.summary(s, names)).toList();
-        return new BlockCreated(summary(block), affected);
+        return new BlockCreated(summary(block), views.eventViews(events.findScheduledOverlapping(input.startsAt(), input.endsAt())));
     }
 
     @Transactional

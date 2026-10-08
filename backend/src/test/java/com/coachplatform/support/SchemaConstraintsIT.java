@@ -21,8 +21,8 @@ class SchemaConstraintsIT extends PostgresIntegrationTest {
     }
 
     private UUID plan(UUID coach) {
-        return jdbc.queryForObject("INSERT INTO plan (coach_id, name, classes_included, price_cop) "
-                + "VALUES (?, ?, 8, 520000) RETURNING id", UUID.class, coach, "plan-" + UUID.randomUUID());
+        return jdbc.queryForObject("INSERT INTO plan (coach_id, name, classes_included, price_cop, modality) "
+                + "VALUES (?, ?, 8, 520000, 'PERSONALIZED') RETURNING id", UUID.class, coach, "plan-" + UUID.randomUUID());
     }
 
     private UUID student(UUID coach) {
@@ -37,13 +37,13 @@ class SchemaConstraintsIT extends PostgresIntegrationTest {
 
     private UUID activeCycle(UUID coach, UUID student, UUID plan) {
         return jdbc.queryForObject("INSERT INTO cycle (coach_id, student_id, plan_id, start_date, end_date, original_end_date, "
-                + "classes_included, status) VALUES (?, ?, ?, '2026-10-06', '2026-11-06', '2026-11-06', 8, 'ACTIVE') RETURNING id",
+                + "classes_included, status, modality) VALUES (?, ?, ?, '2026-10-06', '2026-11-06', '2026-11-06', 8, 'ACTIVE', 'PERSONALIZED') RETURNING id",
                 UUID.class, coach, student, plan);
     }
 
     private int closedCycle(UUID coach, UUID student, UUID plan) {
         return jdbc.update("INSERT INTO cycle (coach_id, student_id, plan_id, start_date, end_date, original_end_date, "
-                + "classes_included, status, closed_at) VALUES (?, ?, ?, '2026-08-01', '2026-09-01', '2026-09-01', 8, 'EXPIRED', now())",
+                + "classes_included, status, closed_at, modality) VALUES (?, ?, ?, '2026-08-01', '2026-09-01', '2026-09-01', 8, 'EXPIRED', now(), 'PERSONALIZED')",
                 coach, student, plan);
     }
 

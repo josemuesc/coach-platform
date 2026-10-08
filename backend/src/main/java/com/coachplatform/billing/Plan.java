@@ -1,8 +1,11 @@
 package com.coachplatform.billing;
 
+import com.coachplatform.billing.api.Modality;
 import com.coachplatform.tenant.TenantScopedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -30,13 +33,18 @@ class Plan extends TenantScopedEntity {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Modality modality;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
     protected Plan() {
     }
 
-    Plan(String name, int classesIncluded, long priceCop) {
+    Plan(String name, int classesIncluded, long priceCop, Modality modality) {
+        this.modality = modality;
         this.name = name;
         this.classesIncluded = classesIncluded;
         this.priceCop = priceCop;
@@ -47,8 +55,10 @@ class Plan extends TenantScopedEntity {
     int getClassesIncluded() { return classesIncluded; }
     long getPriceCop() { return priceCop; }
     boolean isActive() { return active; }
+    Modality getModality() { return modality; }
 
-    void update(String name, int classesIncluded, long priceCop) {
+    void update(String name, int classesIncluded, long priceCop, Modality modality) {
+        this.modality = modality;
         this.name = name;
         this.classesIncluded = classesIncluded;
         this.priceCop = priceCop;

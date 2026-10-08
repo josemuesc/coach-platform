@@ -77,8 +77,13 @@ public abstract class ApiIntegrationTest {
     }
 
     protected String createPlan(String token, String name, int classes, long price) throws Exception {
+        return createPlan(token, name, classes, price, "PERSONALIZED");
+    }
+
+    protected String createPlan(String token, String name, int classes, long price, String modality) throws Exception {
         MvcResult r = mvc.perform(withToken(post("/api/coach/plans"), token).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"" + name + "\",\"classesIncluded\":" + classes + ",\"priceCop\":" + price + "}"))
+                        .content("{\"name\":\"" + name + "\",\"classesIncluded\":" + classes + ",\"priceCop\":" + price
+                                + ",\"modality\":\"" + modality + "\"}"))
                 .andExpect(status().isCreated()).andReturn();
         return JsonPath.read(json(r), "$.id");
     }
@@ -99,10 +104,12 @@ public abstract class ApiIntegrationTest {
         return inviteUrl.substring(inviteUrl.lastIndexOf('/') + 1);
     }
 
+    /** Registers a payment. The amount is mandatory in the API, so tests state 520.000 COP unless extraJson sets its own "amountCop". */
     protected MvcResult pay(String token, String studentId, String planId, String extraJson) throws Exception {
+        String amount = extraJson.contains("amountCop") ? "" : ",\"amountCop\":520000";
         return mvc.perform(withToken(post("/api/coach/students/" + studentId + "/payments"), token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"planId\":\"" + planId + "\",\"method\":\"NEQUI\"" + extraJson + "}"))
+                        .content("{\"planId\":\"" + planId + "\",\"method\":\"NEQUI\"" + amount + extraJson + "}"))
                 .andReturn();
     }
 }

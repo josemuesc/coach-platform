@@ -1,6 +1,7 @@
 package com.coachplatform.billing;
 
 import com.coachplatform.billing.api.CycleStatus;
+import com.coachplatform.billing.api.Modality;
 import com.coachplatform.billing.domain.CycleCalendar;
 import com.coachplatform.billing.domain.CycleState;
 import com.coachplatform.tenant.TenantScopedEntity;
@@ -53,13 +54,19 @@ class Cycle extends TenantScopedEntity {
     @Column(name = "closed_at")
     private Instant closedAt;
 
+    /** The plan's modality when the cycle opened: editing the plan later never changes a running cycle. */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, updatable = false)
+    private Modality modality;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
     protected Cycle() {
     }
 
-    Cycle(UUID studentId, UUID planId, CycleState state) {
+    Cycle(UUID studentId, UUID planId, Modality modality, CycleState state) {
+        this.modality = modality;
         this.studentId = studentId;
         this.planId = planId;
         this.startDate = state.startDate();
@@ -72,6 +79,7 @@ class Cycle extends TenantScopedEntity {
     UUID getStudentId() { return studentId; }
     UUID getPlanId() { return planId; }
     LocalDate getOriginalEndDate() { return originalEndDate; }
+    Modality getModality() { return modality; }
     Instant getCreatedAt() { return createdAt; }
 
     CycleState toState(CycleCalendar calendar) {

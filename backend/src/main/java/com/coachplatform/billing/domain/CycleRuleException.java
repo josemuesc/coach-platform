@@ -12,7 +12,8 @@ public class CycleRuleException extends RuntimeException {
         INVALID_PLAN,
         PENDING_SESSIONS_TO_MARK,
         TRANSFER_EXCEEDS_PLAN,
-        REOPEN_NOT_ALLOWED
+        REOPEN_NOT_ALLOWED,
+        OVERRIDE_REASON_REQUIRED
     }
 
     private final Code code;

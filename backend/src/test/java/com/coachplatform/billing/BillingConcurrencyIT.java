@@ -45,7 +45,7 @@ class BillingConcurrencyIT extends PostgresIntegrationTest {
         UUID coachId = auth.registerCoach(new RegisterCoachRequest("Coach", email, "Prueba-1234-x")).coachId();
         UUID userId = users.findByEmailIgnoreCase(email).orElseThrow().getId();
         return TenantContext.callAs(coachId, () -> {
-            UUID planId = plans.create(new PlanInput("8 clases", 8, 520_000)).id();
+            UUID planId = plans.create(new PlanInput("8 clases", 8, 520_000L, com.coachplatform.billing.api.Modality.PERSONALIZED)).id();
             UUID studentId = students.create(new StudentInput("Ana", "alumno-" + UUID.randomUUID() + "@test.co", null), userId)
                     .student().id();
             return new Fixture(coachId, userId, planId, studentId);
@@ -55,7 +55,7 @@ class BillingConcurrencyIT extends PostgresIntegrationTest {
     private Object payOnce(Fixture f) {
         try {
             return TenantContext.callAs(f.coachId(), () -> billing.registerPayment(f.studentId(),
-                    new RegisterPaymentCommand(f.planId(), null, PaymentMethod.NEQUI, null), f.userId()));
+                    new RegisterPaymentCommand(f.planId(), 520_000L, PaymentMethod.NEQUI, null), f.userId()));
         } catch (Throwable t) {
             return t;
         }

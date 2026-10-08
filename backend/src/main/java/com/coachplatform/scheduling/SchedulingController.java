@@ -1,14 +1,19 @@
 package com.coachplatform.scheduling;
 
 import com.coachplatform.scheduling.api.AgendaView;
+import com.coachplatform.scheduling.api.AttendanceView;
 import com.coachplatform.scheduling.api.BlockCreated;
 import com.coachplatform.scheduling.api.BlockInput;
 import com.coachplatform.scheduling.api.BlockSummary;
-import com.coachplatform.scheduling.api.BookSessionCommand;
+import com.coachplatform.scheduling.api.CancelEventCommand;
 import com.coachplatform.scheduling.api.CancelResult;
+import com.coachplatform.scheduling.api.ChangeCapacityCommand;
+import com.coachplatform.scheduling.api.CoachBookCommand;
 import com.coachplatform.scheduling.api.CoachCancelCommand;
-import com.coachplatform.scheduling.api.MarkAttendanceCommand;
-import com.coachplatform.scheduling.api.SessionSummary;
+import com.coachplatform.scheduling.api.EventCancelResult;
+import com.coachplatform.scheduling.api.EventView;
+import com.coachplatform.scheduling.api.MarkCommand;
+import com.coachplatform.scheduling.api.MarkEventCommand;
 import com.coachplatform.scheduling.api.WindowInput;
 import com.coachplatform.scheduling.api.WindowView;
 import com.coachplatform.security.AuthPrincipal;
@@ -30,7 +35,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** The coach's side of scheduling: availability, agenda, booking for a student, cancelling, attendance. */
+/** The coach's side of scheduling: availability, agenda, booking a student, attendances and events. */
 @RestController
 @RequestMapping("/api/coach")
 class SchedulingController {
@@ -77,32 +82,50 @@ class SchedulingController {
         return scheduling.agenda(from, to);
     }
 
-    @GetMapping("/sessions/pending")
-    List<SessionSummary> pending() {
+    @GetMapping("/attendances/pending")
+    List<AttendanceView> pending() {
         return scheduling.pending();
     }
 
     @GetMapping("/students/{studentId}/sessions")
-    List<SessionSummary> sessionsOfStudent(@PathVariable UUID studentId) {
-        return scheduling.sessionsOfStudent(studentId);
+    List<AttendanceView> attendancesOfStudent(@PathVariable UUID studentId) {
+        return scheduling.attendancesOfStudent(studentId);
     }
 
     @PostMapping("/students/{studentId}/sessions")
     @ResponseStatus(HttpStatus.CREATED)
-    SessionSummary book(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID studentId,
-                        @Valid @RequestBody BookSessionCommand cmd) {
-        return scheduling.bookAsCoach(studentId, cmd.startsAt(), me.userId());
+    AttendanceView book(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID studentId,
+                        @Valid @RequestBody CoachBookCommand cmd) {
+        return scheduling.bookAsCoach(studentId, cmd.startsAt(), me.userId(), cmd.override(), cmd.overrideReason());
     }
 
-    @PostMapping("/sessions/{id}/attendance")
-    SessionSummary attendance(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id,
-                              @Valid @RequestBody MarkAttendanceCommand cmd) {
+    // ---- one student's place ----
+    @PostMapping("/attendances/{id}/mark")
+    AttendanceView mark(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id, @Valid @RequestBody MarkCommand cmd) {
         return scheduling.markAttendance(id, cmd.result(), me.userId());
     }
 
-    @PostMapping("/sessions/{id}/cancel")
-    CancelResult cancel(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id,
-                        @Valid @RequestBody CoachCancelCommand cmd) {
-        return scheduling.cancelAsCoach(id, cmd.reason(), cmd.newStartsAt(), me.userId());
+    @PostMapping("/attendances/{id}/cancel")
+    CancelResult cancelAttendance(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id,
+                                  @Valid @RequestBody CoachCancelCommand cmd) {
+        return scheduling.cancelAsCoach(id, cmd.reason(), cmd.newStartsAt(), cmd.override(), cmd.overrideReason(), me.userId());
+    }
+
+    // ---- the event as a whole ----
+    @PostMapping("/events/{id}/mark")
+    List<AttendanceView> markEvent(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id,
+                                   @Valid @RequestBody MarkEventCommand cmd) {
+        return scheduling.markEvent(id, cmd.marks(), me.userId());
+    }
+
+    @PostMapping("/events/{id}/cancel")
+    EventCancelResult cancelEvent(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id,
+                                  @Valid @RequestBody CancelEventCommand cmd) {
+        return scheduling.cancelEvent(id, cmd.reason(), me.userId());
+    }
+
+    @PutMapping("/events/{id}/capacity")
+    EventView changeCapacity(@PathVariable UUID id, @Valid @RequestBody ChangeCapacityCommand cmd) {
+        return scheduling.changeCapacity(id, cmd.capacity());
     }
 }

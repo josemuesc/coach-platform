@@ -8,11 +8,14 @@ import com.coachplatform.auth.AuthDtos.RegisterCoachRequest;
 import com.coachplatform.auth.AuthService;
 import com.coachplatform.billing.BillingService;
 import com.coachplatform.billing.PlanService;
+import com.coachplatform.billing.api.Modality;
 import com.coachplatform.billing.api.PaymentMethod;
 import com.coachplatform.billing.api.PlanInput;
 import com.coachplatform.billing.api.RegisterPaymentCommand;
+import com.coachplatform.scheduling.api.AttendanceStatus;
+import com.coachplatform.scheduling.api.AttendanceView;
 import com.coachplatform.scheduling.api.BlockInput;
-import com.coachplatform.scheduling.api.SessionStatus;
+import com.coachplatform.scheduling.api.MarkItem;
 import com.coachplatform.scheduling.api.WindowInput;
 import com.coachplatform.students.StudentNotFoundException;
 import com.coachplatform.students.StudentService;
@@ -28,8 +31,9 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Scheduling resources of two coaches on real PostgreSQL: availability, blocks and classes never leak across tenants. */
+/** Scheduling resources of two coaches on real PostgreSQL: availability, blocks, events and attendances never leak across tenants. */
 class SchedulingIsolationPostgresIT extends PostgresIntegrationTest {
 
     private static final ZoneId BOGOTA = ZoneId.of("America/Bogota");
@@ -41,7 +45,7 @@ class SchedulingIsolationPostgresIT extends PostgresIntegrationTest {
     @Autowired BillingService billing;
     @Autowired AvailabilityService availability;
     @Autowired SchedulingService scheduling;
-    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Autowired JdbcTemplate jdbc;
 
     private UUID coach(String prefix) {
         return auth.registerCoach(new RegisterCoachRequest(prefix, prefix + "-" + UUID.randomUUID() + "@test.co", "Prueba-1234-x")).coachId();
@@ -52,7 +56,7 @@ class SchedulingIsolationPostgresIT extends PostgresIntegrationTest {
     }
 
     @Test
-    void coachBCannotReachAvailabilityBlocksOrClassesOfCoachA() {
+    void coachBCannotReachAvailabilityBlocksEventsOrAttendancesOfCoachA() {
         UUID a = coach("a");
         UUID b = coach("b");
         UUID userA = userOf(a);
@@ -62,29 +66,33 @@ class SchedulingIsolationPostgresIT extends PostgresIntegrationTest {
 
         UUID studentA = TenantContext.callAs(a, () -> {
             availability.replaceWeekly(List.of(1, 2, 3, 4, 5, 6, 7).stream().map(d -> new WindowInput(d, "06:00", "20:00")).toList());
-            UUID plan = plans.create(new PlanInput("8", 8, 1)).id();
+            UUID plan = plans.create(new PlanInput("grupal", 8, 1L, Modality.SEMI_PERSONALIZED)).id();
             UUID student = students.create(new StudentInput("Alumno A", "sa-" + UUID.randomUUID() + "@test.co", null), userA).student().id();
-            billing.registerPayment(student, new RegisterPaymentCommand(plan, null, PaymentMethod.CASH, null), userA);
+            billing.registerPayment(student, new RegisterPaymentCommand(plan, 520_000L, PaymentMethod.CASH, null), userA);
             return student;
         });
-        UUID sessionA = TenantContext.callAs(a, () -> scheduling.bookAsCoach(studentA, tenAm, userA).id());
+        AttendanceView placeA = TenantContext.callAs(a, () -> scheduling.bookAsCoach(studentA, tenAm, userA, false, null));
         TenantContext.runAs(a, () -> availability.createBlock(new BlockInput(tenAm.plus(1, ChronoUnit.DAYS), tenAm.plus(2, ChronoUnit.DAYS), "festivo"), userA));
 
         TenantContext.runAs(b, () -> {
             assertThat(availability.weekly()).isEmpty();
             assertThat(availability.blocks(tenAm.minus(10, ChronoUnit.DAYS), tenAm.plus(10, ChronoUnit.DAYS))).isEmpty();
-            assertThat(scheduling.agenda(day, day).sessions()).isEmpty();
+            assertThat(scheduling.agenda(day, day).events()).isEmpty();
             assertThat(scheduling.pending()).isEmpty();
-            assertThatThrownBy(() -> scheduling.sessionsOfStudent(studentA)).isInstanceOf(StudentNotFoundException.class);
-            assertThatThrownBy(() -> scheduling.bookAsCoach(studentA, tenAm.plus(1, ChronoUnit.HOURS), userB)).isInstanceOf(StudentNotFoundException.class);
-            assertThatThrownBy(() -> scheduling.cancelAsCoach(sessionA, "intruso", null, userB)).isInstanceOf(SessionNotFoundException.class);
-            assertThatThrownBy(() -> scheduling.markAttendance(sessionA, SessionStatus.ATTENDED, userB)).isInstanceOf(SessionNotFoundException.class);
+            assertThatThrownBy(() -> scheduling.attendancesOfStudent(studentA)).isInstanceOf(StudentNotFoundException.class);
+            assertThatThrownBy(() -> scheduling.bookAsCoach(studentA, tenAm.plus(1, ChronoUnit.HOURS), userB, false, null)).isInstanceOf(StudentNotFoundException.class);
+            assertThatThrownBy(() -> scheduling.cancelAsCoach(placeA.id(), "intruso", null, false, null, userB)).isInstanceOf(AttendanceNotFoundException.class);
+            assertThatThrownBy(() -> scheduling.markAttendance(placeA.id(), AttendanceStatus.ATTENDED, userB)).isInstanceOf(AttendanceNotFoundException.class);
+            assertThatThrownBy(() -> scheduling.cancelEvent(placeA.eventId(), "intruso", userB)).isInstanceOf(EventNotFoundException.class);
+            assertThatThrownBy(() -> scheduling.changeCapacity(placeA.eventId(), 3)).isInstanceOf(EventNotFoundException.class);
+            assertThatThrownBy(() -> scheduling.markEvent(placeA.eventId(), List.of(new MarkItem(placeA.id(), AttendanceStatus.ATTENDED)), userB))
+                    .isInstanceOf(EventNotFoundException.class);
         });
 
         TenantContext.runAs(a, () -> {
             assertThat(availability.weekly()).hasSize(7);
-            assertThat(scheduling.agenda(day, day).sessions()).extracting(s -> s.id()).containsExactly(sessionA);
-            assertThat(scheduling.sessionsOfStudent(studentA)).extracting(s -> s.status()).containsExactly(SessionStatus.SCHEDULED);
+            assertThat(scheduling.agenda(day, day).events()).extracting(e -> e.id()).containsExactly(placeA.eventId());
+            assertThat(scheduling.attendancesOfStudent(studentA)).extracting(s -> s.status()).containsExactly(AttendanceStatus.SCHEDULED);
         });
     }
 

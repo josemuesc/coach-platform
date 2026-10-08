@@ -17,18 +17,18 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 
 /**
- * Helpers for HTTP-level scheduling tests. The clock starts at noon on Tuesday 2026-10-06 (Bogota); a coach's cycle
- * opened that day ends on 2026-11-06. Every test creates its own coach, so tests never share a calendar.
+ * Helpers for HTTP-level scheduling tests. The clock starts at noon on Tuesday 2026-10-06 (Bogota); a cycle opened that day
+ * ends on 2026-11-06. Every test creates its own coach, so tests never share a calendar. Each coach has availability every
+ * day 06:00-20:00 (14 one-hour slots) and two plans: one PERSONALIZED and one SEMI_PERSONALIZED.
  */
 public abstract class SchedulingApiTest extends ApiIntegrationTest {
 
     protected static final ZoneId BOGOTA = ZoneId.of("America/Bogota");
 
-    /** A coach with availability every day 06:00-20:00 (14 one-hour slots). */
-    protected record CoachCtx(String email, String token, String planId) {
+    protected record CoachCtx(String email, String token, String personalizedPlan, String semiPlan) {
     }
 
-    protected record StudentCtx(String id, String email, String token) {
+    protected record StudentCtx(String id, String name, String email, String token) {
     }
 
     protected static String at(String date, String time) {
@@ -52,62 +52,118 @@ public abstract class SchedulingApiTest extends ApiIntegrationTest {
         }
         mvc.perform(withToken(put("/api/coach/availability"), token).contentType(MediaType.APPLICATION_JSON)
                 .content(windows.append("]").toString())).andExpect(status().isOk());
-        return new CoachCtx(email, token, createPlan(token, planClasses + " clases", planClasses, 520_000));
+        return new CoachCtx(email, token,
+                createPlan(token, "personalizado " + planClasses, planClasses, 520_000, "PERSONALIZED"),
+                createPlan(token, "semi " + planClasses, planClasses, 320_000, "SEMI_PERSONALIZED"));
     }
 
-    /** A student with a login (invitation accepted). Without paying: no cycle yet. */
+    /** A student with a login (invitation accepted), not yet paid. */
     protected StudentCtx newStudent(CoachCtx coach, String name) throws Exception {
         String email = uniqueEmail("alumno");
         String json = createStudentJson(coach.token(), name, email);
         String inviteToken = tokenFromInviteUrl(JsonPath.read(json, "$.inviteUrl"));
         mvc.perform(post("/api/invitations/accept").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"token\":\"" + inviteToken + "\",\"password\":\"" + PASSWORD + "\"}")).andExpect(status().isOk());
-        return new StudentCtx(JsonPath.read(json, "$.student.id"), email, login(email, PASSWORD));
+        return new StudentCtx(JsonPath.read(json, "$.student.id"), name, email, login(email, PASSWORD));
     }
 
-    protected StudentCtx newStudentWithCycle(CoachCtx coach, String name) throws Exception {
-        StudentCtx student = newStudent(coach, name);
-        MvcResult paid = pay(coach.token(), student.id(), coach.planId(), "");
+    protected StudentCtx personalized(CoachCtx coach, String name) throws Exception {
+        return withCycle(coach, newStudent(coach, name), coach.personalizedPlan());
+    }
+
+    protected StudentCtx semi(CoachCtx coach, String name) throws Exception {
+        return withCycle(coach, newStudent(coach, name), coach.semiPlan());
+    }
+
+    protected StudentCtx withCycle(CoachCtx coach, StudentCtx student, String planId) throws Exception {
+        MvcResult paid = pay(coach.token(), student.id(), planId, "");
         if (paid.getResponse().getStatus() != 201) {
             throw new AssertionError("payment failed: " + paid.getResponse().getContentAsString());
         }
         return student;
     }
 
+    // ---- student actions ----
     protected ResultActions studentBooks(StudentCtx s, String startsAt) throws Exception {
         return mvc.perform(withToken(post("/api/student/sessions"), s.token()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"startsAt\":\"" + startsAt + "\"}"));
     }
 
-    protected String studentBooked(StudentCtx s, String startsAt) throws Exception {
-        MvcResult r = studentBooks(s, startsAt).andExpect(status().isCreated()).andReturn();
-        return JsonPath.read(json(r), "$.id");
+    protected MvcResult studentBooked(StudentCtx s, String startsAt) throws Exception {
+        return studentBooks(s, startsAt).andExpect(status().isCreated()).andReturn();
     }
 
-    protected ResultActions coachBooks(CoachCtx c, String studentId, String startsAt) throws Exception {
-        return mvc.perform(withToken(post("/api/coach/students/" + studentId + "/sessions"), c.token())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"startsAt\":\"" + startsAt + "\"}"));
+    protected String attendanceId(MvcResult booked) throws Exception {
+        return JsonPath.read(json(booked), "$.id");
     }
 
-    protected ResultActions studentCancels(StudentCtx s, String sessionId, String newStartsAt) throws Exception {
+    protected String eventId(MvcResult booked) throws Exception {
+        return JsonPath.read(json(booked), "$.eventId");
+    }
+
+    protected ResultActions studentCancels(StudentCtx s, String attendanceId, String newStartsAt) throws Exception {
         String body = newStartsAt == null ? "{}" : "{\"newStartsAt\":\"" + newStartsAt + "\"}";
-        return mvc.perform(withToken(post("/api/student/sessions/" + sessionId + "/cancel"), s.token())
+        return mvc.perform(withToken(post("/api/student/sessions/" + attendanceId + "/cancel"), s.token())
                 .contentType(MediaType.APPLICATION_JSON).content(body));
-    }
-
-    protected ResultActions coachCancels(CoachCtx c, String sessionId, String reason, String newStartsAt) throws Exception {
-        String body = "{\"reason\":\"" + reason + "\"" + (newStartsAt == null ? "" : ",\"newStartsAt\":\"" + newStartsAt + "\"") + "}";
-        return mvc.perform(withToken(post("/api/coach/sessions/" + sessionId + "/cancel"), c.token())
-                .contentType(MediaType.APPLICATION_JSON).content(body));
-    }
-
-    protected ResultActions mark(CoachCtx c, String sessionId, String result) throws Exception {
-        return mvc.perform(withToken(post("/api/coach/sessions/" + sessionId + "/attendance"), c.token())
-                .contentType(MediaType.APPLICATION_JSON).content("{\"result\":\"" + result + "\"}"));
     }
 
     protected String studentSessions(StudentCtx s) throws Exception {
         return json(mvc.perform(withToken(get("/api/student/sessions"), s.token())).andExpect(status().isOk()).andReturn());
+    }
+
+    protected String studentSlots(StudentCtx s, String from, String to) throws Exception {
+        return json(mvc.perform(withToken(get("/api/student/slots").param("from", from).param("to", to), s.token()))
+                .andExpect(status().isOk()).andReturn());
+    }
+
+    // ---- coach actions ----
+    protected ResultActions coachBooks(CoachCtx c, StudentCtx s, String startsAt, boolean override, String reason) throws Exception {
+        String body = "{\"startsAt\":\"" + startsAt + "\",\"override\":" + override
+                + (reason == null ? "" : ",\"overrideReason\":\"" + reason + "\"") + "}";
+        return mvc.perform(withToken(post("/api/coach/students/" + s.id() + "/sessions"), c.token())
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    protected ResultActions coachCancelsAttendance(CoachCtx c, String attendanceId, String reason, String newStartsAt) throws Exception {
+        String body = "{\"reason\":\"" + reason + "\"" + (newStartsAt == null ? "" : ",\"newStartsAt\":\"" + newStartsAt + "\"") + "}";
+        return mvc.perform(withToken(post("/api/coach/attendances/" + attendanceId + "/cancel"), c.token())
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    protected ResultActions coachCancelsEvent(CoachCtx c, String eventId, String reason) throws Exception {
+        return mvc.perform(withToken(post("/api/coach/events/" + eventId + "/cancel"), c.token())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"" + reason + "\"}"));
+    }
+
+    protected ResultActions mark(CoachCtx c, String attendanceId, String result) throws Exception {
+        return mvc.perform(withToken(post("/api/coach/attendances/" + attendanceId + "/mark"), c.token())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"result\":\"" + result + "\"}"));
+    }
+
+    protected ResultActions markEvent(CoachCtx c, String eventId, String... pairs) throws Exception {
+        StringBuilder marks = new StringBuilder("[");
+        for (int i = 0; i < pairs.length; i += 2) {
+            marks.append(i > 0 ? "," : "").append("{\"attendanceId\":\"").append(pairs[i]).append("\",\"status\":\"").append(pairs[i + 1]).append("\"}");
+        }
+        return mvc.perform(withToken(post("/api/coach/events/" + eventId + "/mark"), c.token())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"marks\":" + marks.append("]") + "}"));
+    }
+
+    protected ResultActions changeCapacity(CoachCtx c, String eventId, int capacity) throws Exception {
+        return mvc.perform(withToken(put("/api/coach/events/" + eventId + "/capacity"), c.token())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"capacity\":" + capacity + "}"));
+    }
+
+    protected String agenda(CoachCtx c, String from, String to) throws Exception {
+        return json(mvc.perform(withToken(get("/api/coach/agenda").param("from", from).param("to", to), c.token()))
+                .andExpect(status().isOk()).andReturn());
+    }
+
+    protected void putSettings(CoachCtx c, int cancelWindow, int duration, int groupCapacity, int expectedStatus) throws Exception {
+        mvc.perform(withToken(put("/api/coach/settings"), c.token()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"cancelWindowHours\":" + cancelWindow + ",\"classDurationMinutes\":" + duration
+                        + ",\"expiringSoonDays\":5,\"expiringSoonClasses\":1,\"maxExtensionDays\":60,\"defaultGroupCapacity\":" + groupCapacity + "}"))
+                .andExpect(status().is(expectedStatus));
     }
 
     protected String activeCycle(CoachCtx c, StudentCtx s) throws Exception {
@@ -118,5 +174,9 @@ public abstract class SchedulingApiTest extends ApiIntegrationTest {
     protected String cycles(CoachCtx c, StudentCtx s) throws Exception {
         return json(mvc.perform(withToken(get("/api/coach/students/" + s.id() + "/cycles"), c.token()))
                 .andExpect(status().isOk()).andReturn());
+    }
+
+    protected int classesUsed(CoachCtx c, StudentCtx s) throws Exception {
+        return JsonPath.<Integer>read(activeCycle(c, s), "$.classesUsed");
     }
 }

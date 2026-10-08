@@ -5,7 +5,7 @@ import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.C
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.INVALID_STATE;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.REASON_REQUIRED;
 
-import com.coachplatform.scheduling.api.SessionStatus;
+import com.coachplatform.scheduling.api.AttendanceStatus;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -28,8 +28,8 @@ public final class CancellationPolicy {
      * A student may cancel only a SCHEDULED class, before it starts and with enough notice. Inside the window the
      * attempt is simply refused: the class stays SCHEDULED and ends up "seen" (attended or no-show) when marked.
      */
-    public void requireStudentMayCancel(SessionStatus status, Instant startsAt, int windowHours) {
-        if (status != SessionStatus.SCHEDULED) {
+    public void requireStudentMayCancel(AttendanceStatus status, Instant startsAt, int windowHours) {
+        if (status != AttendanceStatus.SCHEDULED) {
             throw new SchedulingRuleException(INVALID_STATE, "Only a scheduled class can be cancelled");
         }
         if (!clock.instant().isBefore(startsAt)) {
@@ -45,8 +45,8 @@ public final class CancellationPolicy {
      * The coach may ALWAYS cancel a scheduled class (no window, even after the start) but must give a reason. This is
      * also how a late student cancellation is forgiven: the coach cancels it instead of marking it attended/no-show.
      */
-    public void requireCoachMayCancel(SessionStatus status, String reason) {
-        if (status != SessionStatus.SCHEDULED) {
+    public void requireCoachMayCancel(AttendanceStatus status, String reason) {
+        if (status != AttendanceStatus.SCHEDULED) {
             throw new SchedulingRuleException(INVALID_STATE, "Only a scheduled class can be cancelled");
         }
         if (reason == null || reason.isBlank()) {

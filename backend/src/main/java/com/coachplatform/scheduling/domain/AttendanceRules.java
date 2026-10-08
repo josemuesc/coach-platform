@@ -5,7 +5,7 @@ import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.C
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.CYCLE_CLOSED;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.INVALID_STATE;
 
-import com.coachplatform.scheduling.api.SessionStatus;
+import com.coachplatform.scheduling.api.AttendanceStatus;
 import java.time.Clock;
 import java.time.Instant;
 
@@ -16,7 +16,7 @@ import java.time.Instant;
  */
 public final class AttendanceRules {
 
-    public record Outcome(SessionStatus newStatus, boolean consumesClass) {
+    public record Outcome(AttendanceStatus newStatus, boolean consumesClass) {
     }
 
     private final Clock clock;
@@ -25,8 +25,8 @@ public final class AttendanceRules {
         this.clock = clock;
     }
 
-    public Outcome mark(SessionStatus current, SessionStatus target, Instant startsAt, boolean cycleActive) {
-        if (target != SessionStatus.ATTENDED && target != SessionStatus.NO_SHOW) {
+    public Outcome mark(AttendanceStatus current, AttendanceStatus target, Instant startsAt, boolean cycleActive) {
+        if (target != AttendanceStatus.ATTENDED && target != AttendanceStatus.NO_SHOW) {
             throw new SchedulingRuleException(INVALID_STATE, "A class can only be marked ATTENDED or NO_SHOW");
         }
         switch (current) {

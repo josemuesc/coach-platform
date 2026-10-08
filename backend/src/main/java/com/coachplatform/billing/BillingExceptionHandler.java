@@ -18,7 +18,7 @@ class BillingExceptionHandler {
     ResponseEntity<Map<String, String>> cycleRule(CycleRuleException e) {
         HttpStatus status = switch (e.code()) {
             case ACTIVE_CYCLE_EXISTS, CYCLE_NOT_ACTIVE, PENDING_SESSIONS_TO_MARK, REOPEN_NOT_ALLOWED -> HttpStatus.CONFLICT;
-            case INVALID_PAYMENT_DATE, INVALID_EXTENSION, EXTENSION_LIMIT_EXCEEDED, INVALID_PLAN, TRANSFER_EXCEEDS_PLAN -> HttpStatus.UNPROCESSABLE_ENTITY;
+            case INVALID_PAYMENT_DATE, INVALID_EXTENSION, EXTENSION_LIMIT_EXCEEDED, INVALID_PLAN, TRANSFER_EXCEEDS_PLAN, OVERRIDE_REASON_REQUIRED -> HttpStatus.UNPROCESSABLE_ENTITY;
         };
         return ResponseEntity.status(status).body(Map.of("code", e.code().name(), "message", e.getMessage()));
     }

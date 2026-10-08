@@ -1,10 +1,10 @@
 package com.coachplatform.scheduling;
 
-import com.coachplatform.scheduling.api.BookSessionCommand;
+import com.coachplatform.scheduling.api.AttendanceView;
+import com.coachplatform.scheduling.api.BookCommand;
 import com.coachplatform.scheduling.api.CancelResult;
-import com.coachplatform.scheduling.api.SessionSummary;
-import com.coachplatform.scheduling.api.SlotView;
 import com.coachplatform.scheduling.api.StudentCancelCommand;
+import com.coachplatform.scheduling.api.StudentSlotView;
 import com.coachplatform.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
@@ -22,8 +22,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The student's side. Which student is ALWAYS taken from the token's user: no endpoint here accepts a student id,
- * so there is nothing to tamper with to reach another student's classes.
+ * The student's side. Which student is ALWAYS taken from the token's user: no endpoint here accepts a student id, and
+ * nothing here returns the name or id of another student, so there is nothing to tamper with and nothing to leak.
  */
 @RestController
 @RequestMapping("/api/student")
@@ -36,18 +36,18 @@ class StudentSchedulingController {
     }
 
     @GetMapping("/slots")
-    List<SlotView> slots(@AuthenticationPrincipal AuthPrincipal me, @RequestParam LocalDate from, @RequestParam LocalDate to) {
+    List<StudentSlotView> slots(@AuthenticationPrincipal AuthPrincipal me, @RequestParam LocalDate from, @RequestParam LocalDate to) {
         return scheduling.slotsForStudent(me.userId(), from, to);
     }
 
     @GetMapping("/sessions")
-    List<SessionSummary> mySessions(@AuthenticationPrincipal AuthPrincipal me) {
-        return scheduling.mySessions(me.userId());
+    List<AttendanceView> mySessions(@AuthenticationPrincipal AuthPrincipal me) {
+        return scheduling.myAttendances(me.userId());
     }
 
     @PostMapping("/sessions")
     @ResponseStatus(HttpStatus.CREATED)
-    SessionSummary book(@AuthenticationPrincipal AuthPrincipal me, @Valid @RequestBody BookSessionCommand cmd) {
+    AttendanceView book(@AuthenticationPrincipal AuthPrincipal me, @Valid @RequestBody BookCommand cmd) {
         return scheduling.bookAsStudent(me.userId(), cmd.startsAt());
     }
 

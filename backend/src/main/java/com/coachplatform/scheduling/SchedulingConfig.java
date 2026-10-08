@@ -3,6 +3,7 @@ package com.coachplatform.scheduling;
 import com.coachplatform.scheduling.domain.AttendanceRules;
 import com.coachplatform.scheduling.domain.BookingRules;
 import com.coachplatform.scheduling.domain.CancellationPolicy;
+import com.coachplatform.scheduling.domain.EventRules;
 import com.coachplatform.scheduling.domain.SlotCalendar;
 import java.time.Clock;
 import java.time.ZoneId;
@@ -33,5 +34,10 @@ class SchedulingConfig {
     @Bean
     AttendanceRules attendanceRules(Clock clock) {
         return new AttendanceRules(clock);
+    }
+
+    @Bean
+    EventRules eventRules(Clock clock) {
+        return new EventRules(clock);
     }
 }

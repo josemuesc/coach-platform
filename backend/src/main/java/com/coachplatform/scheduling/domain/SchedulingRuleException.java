@@ -18,7 +18,14 @@ public class SchedulingRuleException extends RuntimeException {
         INVALID_STATE,
         ALREADY_MARKED,
         CYCLE_CLOSED,
-        REASON_REQUIRED
+        REASON_REQUIRED,
+        MODALITY_MISMATCH,
+        EVENT_FULL,
+        ALREADY_BOOKED,
+        EVENT_ALREADY_STARTED,
+        CAPACITY_NOT_CONFIGURABLE,
+        INVALID_CAPACITY,
+        CAPACITY_BELOW_OCCUPANCY
     }
 
     private final Code code;

@@ -43,7 +43,7 @@ public class CoachService {
     @Transactional(readOnly = true)
     public SchedulingSettings schedulingSettings(UUID coachId) {
         CoachSettings s = settings.findById(coachId).orElseThrow();
-        return new SchedulingSettings(s.getCancelWindowHours(), s.getClassDurationMinutes());
+        return new SchedulingSettings(s.getCancelWindowHours(), s.getClassDurationMinutes(), s.getDefaultGroupCapacity());
     }
 
     @Transactional(readOnly = true)
@@ -55,13 +55,13 @@ public class CoachService {
     public CoachSettingsView updateSettings(UUID coachId, UpdateCoachSettings cmd) {
         CoachSettings s = settings.findById(coachId).orElseThrow();
         s.update(cmd.cancelWindowHours(), cmd.classDurationMinutes(), cmd.expiringSoonDays(), cmd.expiringSoonClasses(),
-                cmd.maxExtensionDays());
+                cmd.maxExtensionDays(), cmd.defaultGroupCapacity());
         return view(s);
     }
 
     private static CoachSettingsView view(CoachSettings s) {
         return new CoachSettingsView(s.getCancelWindowHours(), s.getClassDurationMinutes(), s.getExpiringSoonDays(),
-                s.getExpiringSoonClasses(), s.getMaxExtensionDays());
+                s.getExpiringSoonClasses(), s.getMaxExtensionDays(), s.getDefaultGroupCapacity());
     }
 
     /**

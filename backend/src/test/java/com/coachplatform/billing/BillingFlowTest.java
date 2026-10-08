@@ -73,11 +73,10 @@ class BillingFlowTest extends ApiIntegrationTest {
     }
 
     @Test
-    void amountDefaultsToThePlanPriceAndCanBeOverridden() throws Exception {
-        var paid = pay(coachToken, studentId, planId, ",\"amountCop\":450000");
-        assertThat(paid.getResponse().getStatus()).isEqualTo(201);
+    void thePaymentRecordsTheAmountThatWasActuallyReceived() throws Exception {
+        assertThat(pay(coachToken, studentId, planId, ",\"amountCop\":450000").getResponse().getStatus()).isEqualTo(201);
         mvc.perform(withToken(get("/api/coach/payments").param("studentId", studentId), coachToken))
-                .andExpect(jsonPath("$[0].amountCop").value(450000));
+                .andExpect(jsonPath("$[0].amountCop").value(450000));      // not the plan's 520.000: the coach states what came in
     }
 
     @Test
@@ -127,6 +126,33 @@ class BillingFlowTest extends ApiIntegrationTest {
         assertThat(threeDaysBack.getResponse().getStatus()).isEqualTo(201);
         assertThat(JsonPath.<String>read(json(threeDaysBack), "$.startDate")).isEqualTo("2026-10-03");
         assertThat(JsonPath.<String>read(json(threeDaysBack), "$.endDate")).isEqualTo("2026-11-03");
+    }
+
+    @Test
+    void aNewPlanMustStateItsModalityAndTheApiReturnsIt() throws Exception {
+        mvc.perform(withToken(post("/api/coach/plans"), coachToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"sin modalidad\",\"classesIncluded\":8,\"priceCop\":1}")).andExpect(status().isBadRequest());
+        mvc.perform(withToken(post("/api/coach/plans"), coachToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"mala\",\"classesIncluded\":8,\"priceCop\":1,\"modality\":\"GRUPAL\"}")).andExpect(status().isBadRequest());
+
+        String semi = createPlan(coachToken, "grupal 12", 12, 620_000, "SEMI_PERSONALIZED");
+        mvc.perform(withToken(get("/api/coach/plans"), coachToken))
+                .andExpect(jsonPath("$[?(@.id=='" + semi + "')].modality").value("SEMI_PERSONALIZED"))
+                .andExpect(jsonPath("$[?(@.id=='" + planId + "')].modality").value("PERSONALIZED"));
+    }
+
+    @Test
+    void theCycleKeepsTheModalityOfThePlanItWasOpenedWith() throws Exception {
+        String semi = createPlan(coachToken, "semi", 8, 400_000, "SEMI_PERSONALIZED");
+        assertThat(pay(coachToken, studentId, semi, "").getResponse().getStatus()).isEqualTo(201);
+        assertThat(JsonPath.<String>read(activeCycleJson(), "$.modality")).isEqualTo("SEMI_PERSONALIZED");
+
+        // editing the plan afterwards does not change a cycle that is already running
+        mvc.perform(withToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/coach/plans/" + semi), coachToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"semi\",\"classesIncluded\":8,\"priceCop\":400000,\"modality\":\"PERSONALIZED\"}"))
+                .andExpect(status().isOk());
+        assertThat(JsonPath.<String>read(activeCycleJson(), "$.modality")).isEqualTo("SEMI_PERSONALIZED");
     }
 
     @Test

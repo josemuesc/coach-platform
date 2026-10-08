@@ -5,6 +5,7 @@ import com.coachplatform.students.api.InvitationIssued;
 import com.coachplatform.students.api.StudentInput;
 import com.coachplatform.students.api.StudentSummary;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -46,7 +47,7 @@ class StudentController {
         }
     }
 
-    record UpdateStudentRequest(@Valid StudentInput data, Boolean active) {
+    record UpdateStudentRequest(@NotNull @Valid StudentInput data, Boolean active) {
     }
 
     @PostMapping

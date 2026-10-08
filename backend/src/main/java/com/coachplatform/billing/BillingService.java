@@ -1,6 +1,7 @@
 package com.coachplatform.billing;
 
 import com.coachplatform.billing.api.CycleSessions;
+import com.coachplatform.billing.api.FutureAttendance;
 import com.coachplatform.billing.api.CycleStatus;
 import com.coachplatform.billing.api.CycleSummary;
 import com.coachplatform.billing.api.ExtendCycleCommand;
@@ -72,13 +73,24 @@ public class BillingService {
         int pending = previous.map(c -> pendingMarks(c, c.toState(calendar))).orElse(0);
         var result = openCycle(cmd, plan, previous, pending);
 
-        // Classes of the old cycle that have not started yet (only possible when renewing on its deadline day) move
-        // to the new cycle and count against ITS quota: check before writing anything.
-        int toTransfer = result.previousUpdated().isPresent()
-                ? cycleSessions.futureScheduledCount(previous.orElseThrow().getId()) : 0;
-        if (toTransfer > plan.getClassesIncluded()) {
-            throw new CycleRuleException(CycleRuleException.Code.TRANSFER_EXCEEDS_PLAN, toTransfer
+        // Attendances of the old cycle whose event has not started yet (only possible when renewing on its deadline day)
+        // move to the new cycle and count against ITS quota. Check everything before writing anything.
+        List<FutureAttendance> toTransfer = result.previousUpdated().isPresent()
+                ? cycleSessions.futureAttendances(previous.orElseThrow().getId()) : List.of();
+        if (toTransfer.size() > plan.getClassesIncluded()) {
+            throw new CycleRuleException(CycleRuleException.Code.TRANSFER_EXCEEDS_PLAN, toTransfer.size()
                     + " scheduled class(es) of the previous cycle do not fit in a plan of " + plan.getClassesIncluded());
+        }
+        List<FutureAttendance> modalityConflicts = toTransfer.stream().filter(a -> a.eventModality() != plan.getModality()).toList();
+        boolean forceModality = cmd.overrideModality();
+        if (!modalityConflicts.isEmpty()) {
+            if (!forceModality) {
+                throw new ModalityConflictOnRenewalException(plan.getModality(), modalityConflicts);
+            }
+            if (cmd.overrideReason() == null || cmd.overrideReason().isBlank()) {
+                throw new CycleRuleException(CycleRuleException.Code.OVERRIDE_REASON_REQUIRED,
+                        "A reason is required to move classes of another modality to the new cycle");
+            }
         }
 
         try {
@@ -88,11 +100,13 @@ public class BillingService {
                 // partial unique index would still see the old cycle as ACTIVE.
                 cycles.saveAndFlush(previous.get());
             }
-            Cycle cycle = cycles.saveAndFlush(new Cycle(studentId, plan.getId(), result.newCycle()));
-            if (toTransfer > 0) {
-                cycleSessions.moveFutureSessions(previous.orElseThrow().getId(), cycle.getId());
+            Cycle cycle = cycles.saveAndFlush(new Cycle(studentId, plan.getId(), plan.getModality(), result.newCycle()));
+            if (!toTransfer.isEmpty()) {
+                cycleSessions.moveFutureAttendances(previous.orElseThrow().getId(), cycle.getId(), plan.getModality(),
+                        modalityConflicts.isEmpty() ? null : recordedBy,
+                        modalityConflicts.isEmpty() ? null : cmd.overrideReason().trim());
             }
-            long amount = cmd.amountCop() != null ? cmd.amountCop() : plan.getPriceCop();
+            long amount = cmd.amountCop();   // mandatory (validated at the API): what was really received
             Payment payment = payments.saveAndFlush(new Payment(studentId, cycle.getId(), amount, cmd.method(),
                     result.newCycle().startDate(), recordedBy));
             return new PaymentRegistered(payment.getId(), cycle.getId(), result.newCycle().startDate(),
@@ -243,6 +257,6 @@ public class BillingService {
         return new CycleSummary(cycle.getId(), cycle.getStudentId(), cycle.getPlanId(), effective.startDate(),
                 effective.endDate(), cycle.getOriginalEndDate(), effective.classesIncluded(), effective.classesUsed(),
                 effective.classesRemaining(), effective.classesLost(), effective.isActive() ? pending : 0,
-                effective.status());
+                effective.status(), cycle.getModality());
     }
 }
