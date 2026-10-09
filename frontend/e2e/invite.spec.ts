@@ -160,7 +160,7 @@ test.describe('errors that do not consume the invitation', () => {
     await page.getByLabel(/Acepto, como representante legal/).check();
     await fillPasswords(page);
     await page.getByRole('button', { name: 'Aceptar y crear la cuenta' }).click();
-    await expect(page.getByRole('alert')).toContainText('Este correo ya tiene una cuenta. Pide a tu entrenador que registre un correo distinto para cada alumno.');
+    await expect(page.getByRole('alert')).toContainText('Este correo ya tiene una cuenta. Cada alumno necesita un correo distinto; si eres el acudiente, avisa a tu entrenador para que registre otro.');
     expect(await serious(page)).toEqual([]);
     expect(await previewStatus(request, second.inviteToken)).toBe(200);
   });

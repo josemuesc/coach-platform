@@ -157,7 +157,7 @@ class StudentProfileAndConsentTest extends ApiIntegrationTest {
         post("/api/coach/students", coach, "{\"fullName\":\"Hijo 1\",\"birthDate\":\"2010-05-01\"," + guardian + "}").andExpect(status().isCreated());
         post("/api/coach/students", coach, "{\"fullName\":\"Hijo 2\",\"birthDate\":\"2011-05-01\"," + guardian + "}")
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GUARDIAN_EMAIL_IN_USE"))
-                .andExpect(jsonPath("$.details.message").value("Este correo ya tiene una cuenta. Pide a tu entrenador que registre un correo distinto para cada alumno."));
+                .andExpect(jsonPath("$.details.message").value("Este correo ya tiene una cuenta. Cada alumno necesita un correo distinto; si eres el acudiente, avisa a tu entrenador para que registre otro."));
         // changing a minor's guardian email to one that is already in use is the same error
         String other = uniqueEmail("otra");
         String json = json(post("/api/coach/students", coach, "{\"fullName\":\"Hijo 3\",\"birthDate\":\"2012-05-01\",\"guardian\":" + GUARDIAN.formatted(other) + "}")

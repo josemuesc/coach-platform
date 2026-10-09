@@ -27,7 +27,7 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `PLAN_NAME_EXISTS` | 409 | Ya tienes un plan con ese nombre. |
 | `STUDENT_NOT_FOUND` | 404 | No se encontró el alumno. |
 | `STUDENT_EMAIL_EXISTS` | 409 | Ya tienes un alumno con ese correo. |
-| `GUARDIAN_EMAIL_IN_USE` | 409 | Este correo ya tiene una cuenta. Pide a tu entrenador que registre un correo distinto para cada alumno. (Aplica a un alumno menor, al crearlo, al cambiar el correo del representante o al aceptar la invitación si el representante ya tiene cuenta con otro entrenador. La respuesta lleva este texto en `details.message`.) |
+| `GUARDIAN_EMAIL_IN_USE` | 409 | Este correo ya tiene una cuenta. Cada alumno necesita un correo distinto; si eres el acudiente, avisa a tu entrenador para que registre otro. (Aplica a un alumno menor, al crearlo, al cambiar el correo del representante o al aceptar la invitación si el representante ya tiene cuenta con otro entrenador. La respuesta lleva este texto en `details.message`.) |
 | `EMAIL_LOCKED` | 409 | El correo no se puede cambiar porque el alumno ya aceptó la invitación. |
 | `STUDENT_ALREADY_HAS_ACCOUNT` | 409 | El alumno ya tiene su cuenta creada. |
 | `STUDENT_HAS_NO_ACCOUNT` | 409 | El alumno todavía no aceptó la invitación, así que no hay contraseña que restablecer. Reenvía la invitación. |

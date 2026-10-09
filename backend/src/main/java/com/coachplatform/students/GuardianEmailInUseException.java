@@ -10,7 +10,7 @@ import org.springframework.http.HttpStatus;
  */
 public class GuardianEmailInUseException extends ApiException {
 
-    static final String MESSAGE = "Este correo ya tiene una cuenta. Pide a tu entrenador que registre un correo distinto para cada alumno.";
+    static final String MESSAGE = "Este correo ya tiene una cuenta. Cada alumno necesita un correo distinto; si eres el acudiente, avisa a tu entrenador para que registre otro.";
 
     public GuardianEmailInUseException() {
         super(HttpStatus.CONFLICT, "GUARDIAN_EMAIL_IN_USE", Map.of("message", MESSAGE));
