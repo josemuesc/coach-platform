@@ -13,7 +13,9 @@ public class CycleRuleException extends RuntimeException {
         PENDING_SESSIONS_TO_MARK,
         TRANSFER_EXCEEDS_PLAN,
         REOPEN_NOT_ALLOWED,
-        OVERRIDE_REASON_REQUIRED
+        OVERRIDE_REASON_REQUIRED,
+        INVALID_PAYMENT_REFERENCE,
+        PAYMENT_REFERENCE_HAS_LONG_NUMBER
     }
 
     private final Code code;

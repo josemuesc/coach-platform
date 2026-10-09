@@ -44,6 +44,8 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `TRANSFER_EXCEEDS_PLAN` | 422 | Las clases ya agendadas no caben en el plan nuevo. |
 | `MODALITY_CONFLICT_ON_RENEWAL` | 409 | El plan nuevo tiene otra modalidad que las clases ya agendadas. Cancélalas sin castigo o repite el pago autorizando el cambio con un motivo. |
 | `OVERRIDE_REASON_REQUIRED` | 422 | Indica el motivo para autorizar el cambio. |
+| `INVALID_PAYMENT_REFERENCE` | 422 | La referencia debe ser texto de una sola línea, de hasta 100 caracteres. |
+| `PAYMENT_REFERENCE_HAS_LONG_NUMBER` | 422 | Escribe solo el número de comprobante, sin números de tarjeta ni de cuenta. (Se rechaza cualquier secuencia de 12 o más dígitos seguidos.) |
 | `REOPEN_NOT_ALLOWED` | 409 | Este ciclo no se puede reabrir. |
 
 ## Agenda, asistencia y confirmación

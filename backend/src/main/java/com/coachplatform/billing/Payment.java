@@ -38,6 +38,9 @@ class Payment extends TenantScopedEntity {
     @Column(name = "paid_on", nullable = false, updatable = false)
     private LocalDate paidOn;
 
+    @Column(length = 100, updatable = false)
+    private String reference;
+
     @Column(name = "recorded_by", nullable = false, updatable = false)
     private UUID recordedBy;
 
@@ -47,13 +50,15 @@ class Payment extends TenantScopedEntity {
     protected Payment() {
     }
 
-    Payment(UUID studentId, UUID cycleId, long amountCop, PaymentMethod method, LocalDate paidOn, UUID recordedBy) {
+    Payment(UUID studentId, UUID cycleId, long amountCop, PaymentMethod method, LocalDate paidOn, UUID recordedBy,
+            String reference) {
         this.studentId = studentId;
         this.cycleId = cycleId;
         this.amountCop = amountCop;
         this.method = method;
         this.paidOn = paidOn;
         this.recordedBy = recordedBy;
+        this.reference = reference;
     }
 
     UUID getId() { return id; }
@@ -62,6 +67,7 @@ class Payment extends TenantScopedEntity {
     long getAmountCop() { return amountCop; }
     PaymentMethod getMethod() { return method; }
     LocalDate getPaidOn() { return paidOn; }
+    String getReference() { return reference; }
     UUID getRecordedBy() { return recordedBy; }
     Instant getCreatedAt() { return createdAt; }
 }

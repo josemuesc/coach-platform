@@ -13,6 +13,7 @@ import com.coachplatform.billing.api.StudentBillingOverview;
 import com.coachplatform.billing.domain.CycleCalendar;
 import com.coachplatform.billing.domain.CycleRuleException;
 import com.coachplatform.billing.domain.CycleRules;
+import com.coachplatform.billing.domain.PaymentReferenceRules;
 import com.coachplatform.billing.domain.CycleState;
 import com.coachplatform.coach.CoachService;
 import com.coachplatform.coach.api.BillingSettings;
@@ -66,6 +67,7 @@ public class BillingService {
     /** Records a payment and opens its cycle in ONE transaction. */
     @Transactional
     public PaymentRegistered registerPayment(UUID studentId, RegisterPaymentCommand cmd, UUID recordedBy) {
+        String reference = PaymentReferenceRules.normalize(cmd.reference());   // refused before anything is locked or written
         students.lockForUpdate(studentId);
         Plan plan = plans.findById(cmd.planId()).filter(Plan::isActive).orElseThrow(PlanNotFoundException::new);
 
@@ -108,9 +110,9 @@ public class BillingService {
             }
             long amount = cmd.amountCop();   // mandatory (validated at the API): what was really received
             Payment payment = payments.saveAndFlush(new Payment(studentId, cycle.getId(), amount, cmd.method(),
-                    result.newCycle().startDate(), recordedBy));
+                    result.newCycle().startDate(), recordedBy, reference));
             return new PaymentRegistered(payment.getId(), cycle.getId(), result.newCycle().startDate(),
-                    result.newCycle().endDate());
+                    result.newCycle().endDate(), payment.getReference());
         } catch (DataIntegrityViolationException e) {
             // Defence in depth: the unique index caught a race the lock should already have prevented.
             throw new CycleRuleException(CycleRuleException.Code.ACTIVE_CYCLE_EXISTS,
@@ -213,7 +215,7 @@ public class BillingService {
         students.get(studentId);
         return payments.findByStudentIdOrderByPaidOnDescCreatedAtDesc(studentId).stream()
                 .map(p -> new PaymentSummary(p.getId(), p.getStudentId(), p.getCycleId(), p.getAmountCop(),
-                        p.getMethod(), p.getPaidOn(), p.getRecordedBy(), p.getCreatedAt()))
+                        p.getMethod(), p.getPaidOn(), p.getRecordedBy(), p.getCreatedAt(), p.getReference()))
                 .toList();
     }
 

@@ -16,6 +16,9 @@ class SchemaConstraintsIT extends PostgresIntegrationTest {
     @Autowired
     JdbcTemplate jdbc;
 
+    @Autowired
+    javax.sql.DataSource dataSource;
+
     private UUID coach() {
         return jdbc.queryForObject("INSERT INTO coach (name, brand_name) VALUES ('c', 'c') RETURNING id", UUID.class);
     }
@@ -138,5 +141,83 @@ class SchemaConstraintsIT extends PostgresIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class);                      // deadline before the start
         assertThatThrownBy(() -> jdbc.update("INSERT INTO student (coach_id, full_name, email) VALUES (?, 's', 'MAYUS@test.co')", coach))
                 .isInstanceOf(DataIntegrityViolationException.class);                      // email must be lowercase
+    }
+
+    // ---- V8: payment method OTHER, the reference and the immutability ----------------------------------------
+
+    private UUID payment(String method, String reference) {
+        UUID coach = coach();
+        UUID student = student(coach);
+        UUID cycle = activeCycle(coach, student, plan(coach));
+        return jdbc.queryForObject("INSERT INTO payment (coach_id, student_id, cycle_id, amount_cop, method, paid_on, recorded_by, reference) "
+                + "VALUES (?, ?, ?, 520000, ?, '2026-10-06', ?, ?) RETURNING id", UUID.class, coach, student, cycle, method, appUser(coach), reference);
+    }
+
+    @Test
+    void thePaymentMethodAcceptsOtherAndNothingUnknown() {
+        assertThat(payment("OTHER", null)).isNotNull();
+        for (String ok : new String[] {"NEQUI", "TRANSFER", "CASH"}) {
+            assertThat(payment(ok, null)).isNotNull();
+        }
+        assertThatThrownBy(() -> payment("BITCOIN", null)).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void theReferenceCheckRefusesWhatTheApplicationWouldRefuse() {
+        assertThat(payment("NEQUI", "M12345678")).isNotNull();
+        assertThat(payment("NEQUI", "12345678901")).isNotNull();   // 11 digits
+        for (String bad : new String[] {"", "   ", " padded ", "a\nb", "a\tb", "123456789012", "x 4111111111111111 y", "a".repeat(101)}) {
+            assertThatThrownBy(() -> payment("NEQUI", bad)).as(bad.replaceAll("\\p{C}", "?")).isInstanceOf(DataIntegrityViolationException.class);
+        }
+    }
+
+    @Test
+    void aPaymentCanNeverBeUpdatedDeletedOrTruncated() {
+        UUID payment = payment("CASH", "M1");
+        assertThatThrownBy(() -> jdbc.update("UPDATE payment SET amount_cop = 1 WHERE id = ?", payment)).hasMessageContaining("immutable");
+        assertThatThrownBy(() -> jdbc.update("UPDATE payment SET reference = NULL WHERE id = ?", payment)).hasMessageContaining("immutable");
+        assertThatThrownBy(() -> jdbc.update("DELETE FROM payment WHERE id = ?", payment)).hasMessageContaining("immutable");
+        assertThatThrownBy(() -> jdbc.execute("TRUNCATE payment")).hasMessageContaining("immutable");
+        assertThat(jdbc.queryForObject("SELECT amount_cop FROM payment WHERE id = ?", Long.class, payment)).isEqualTo(520000L);
+    }
+
+    /** docs/payment-correction.md, step by step: the documented transaction really corrects a payment and leaves the protection ON. */
+    @Test
+    void theDocumentedCorrectionProcedureWorksAndLeavesTheProtectionOn() throws Exception {
+        UUID payment = payment("CASH", "M1");
+        try (java.sql.Connection c = dataSource.getConnection(); java.sql.Statement st = c.createStatement()) {
+            c.setAutoCommit(false);
+            st.execute("SELECT id FROM payment WHERE id = '" + payment + "' FOR UPDATE");
+            st.execute("ALTER TABLE payment DISABLE TRIGGER trg_payment_immutable");
+            assertThat(st.executeUpdate("UPDATE payment SET amount_cop = 480000, method = 'TRANSFER', reference = 'M2' WHERE id = '" + payment + "'")).isEqualTo(1);
+            st.execute("ALTER TABLE payment ENABLE TRIGGER trg_payment_immutable");
+            try (var rs = st.executeQuery("SELECT tgname, tgenabled FROM pg_trigger WHERE tgrelid = 'payment'::regclass AND NOT tgisinternal ORDER BY tgname")) {
+                assertThat(rs.next()).isTrue();
+                assertThat(rs.getString("tgname")).isEqualTo("trg_payment_immutable");
+                assertThat(rs.getString("tgenabled")).isEqualTo("O");
+                assertThat(rs.next()).isTrue();
+                assertThat(rs.getString("tgname")).isEqualTo("trg_payment_no_truncate");
+                assertThat(rs.getString("tgenabled")).isEqualTo("O");
+            }
+            // the verification queries of the document run as written
+            st.executeQuery("SELECT p.paid_on = c.start_date AS fecha_ok, p.student_id = c.student_id AS alumno_ok FROM payment p "
+                    + "JOIN cycle c ON c.id = p.cycle_id AND c.coach_id = p.coach_id WHERE p.id = '" + payment + "'").close();
+            st.executeQuery("SELECT c.classes_used, (SELECT count(*) FROM session_attendance a WHERE a.cycle_id = c.id AND a.status IN ('ATTENDED', 'NO_SHOW')) "
+                    + "AS marcadas FROM cycle c WHERE c.id = (SELECT cycle_id FROM payment WHERE id = '" + payment + "')").close();
+            c.commit();
+        }
+        assertThat(jdbc.queryForMap("SELECT amount_cop, method, reference FROM payment WHERE id = ?", payment))
+                .containsEntry("amount_cop", 480000L).containsEntry("method", "TRANSFER").containsEntry("reference", "M2");
+        // and it is immutable again
+        assertThatThrownBy(() -> jdbc.update("UPDATE payment SET amount_cop = 1 WHERE id = ?", payment)).hasMessageContaining("immutable");
+        // a rolled-back rehearsal leaves everything as it was, protection included
+        try (java.sql.Connection c = dataSource.getConnection(); java.sql.Statement st = c.createStatement()) {
+            c.setAutoCommit(false);
+            st.execute("ALTER TABLE payment DISABLE TRIGGER trg_payment_immutable");
+            st.executeUpdate("UPDATE payment SET amount_cop = 7 WHERE id = '" + payment + "'");
+            c.rollback();
+        }
+        assertThat(jdbc.queryForObject("SELECT amount_cop FROM payment WHERE id = ?", Long.class, payment)).isEqualTo(480000L);
+        assertThatThrownBy(() -> jdbc.update("UPDATE payment SET amount_cop = 1 WHERE id = ?", payment)).hasMessageContaining("immutable");
     }
 }

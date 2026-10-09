@@ -79,7 +79,7 @@ class AppRuntimeRoleScriptIT extends PostgresIntegrationTest {
             assertThat(stateOf(app, "create table public.sneaky (id int)")).isEqualTo(DENIED);
             assertThat(stateOf(app, "drop trigger trg_account_audit_immutable on account_audit")).isEqualTo(DENIED);
             // append-only tables: not even by the application
-            for (String table : List.of("consent_record", "consent_revocation", "attendance_audit", "account_audit")) {
+            for (String table : List.of("consent_record", "consent_revocation", "attendance_audit", "account_audit", "payment")) {
                 assertThat(stateOf(app, "update " + table + " set coach_id = coach_id where false")).as("update " + table).isEqualTo(DENIED);
                 assertThat(stateOf(app, "delete from " + table + " where false")).as("delete " + table).isEqualTo(DENIED);
                 assertThat(stateOf(app, "insert into " + table + " select * from " + table + " where false")).as("insert " + table).isNull();
@@ -99,8 +99,8 @@ class AppRuntimeRoleScriptIT extends PostgresIntegrationTest {
                 + "where p.proname = 'forbid_row_change' and not tg.tgisinternal and (tg.tgtype & 16) <> 0", String.class);
         List<String> noDelete = jdbc.queryForList("select distinct tg.tgrelid::regclass::text from pg_trigger tg join pg_proc p on p.oid = tg.tgfoid "
                 + "where p.proname = 'forbid_row_change' and not tg.tgisinternal and (tg.tgtype & 8) <> 0", String.class);
-        assertThat(noUpdate).contains("consent_record", "consent_revocation", "attendance_audit", "account_audit").doesNotContain("password_reset");
-        assertThat(noDelete).contains("password_reset", "account_audit");
+        assertThat(noUpdate).contains("consent_record", "consent_revocation", "attendance_audit", "account_audit", "payment").doesNotContain("password_reset");
+        assertThat(noDelete).contains("password_reset", "account_audit", "payment");
         for (String t : tables) {
             assertThat(has(t, "SELECT")).as("select " + t).isTrue();
             assertThat(has(t, "INSERT")).as("insert " + t).isTrue();

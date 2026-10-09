@@ -1174,6 +1174,7 @@ export interface components {
             endDate: string;
             /** Format: uuid */
             paymentId: string;
+            reference?: string | null;
             /** Format: date */
             startDate: string;
         };
@@ -1187,11 +1188,12 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            method: "NEQUI" | "TRANSFER" | "CASH";
+            method: "NEQUI" | "TRANSFER" | "CASH" | "OTHER";
             /** Format: date */
             paidOn: string;
             /** Format: uuid */
             recordedBy: string;
+            reference?: string | null;
             /** Format: uuid */
             studentId: string;
         };
@@ -1238,13 +1240,14 @@ export interface components {
             /** Format: int64 */
             amountCop: number;
             /** @enum {string} */
-            method: "NEQUI" | "TRANSFER" | "CASH";
+            method: "NEQUI" | "TRANSFER" | "CASH" | "OTHER";
             overrideModality?: boolean;
             overrideReason?: string;
             /** Format: date */
             paidOn?: string;
             /** Format: uuid */
             planId: string;
+            reference?: string;
         };
         ResetLinkResponse: {
             /** Format: date-time */
