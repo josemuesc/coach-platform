@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --font-display: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: #f3f5f2;
+  --color-ink: #0f1a17;
+  --color-ink-2: #4a5a55;
+  --color-line: #dce3df;
+  --color-amber-bg: #fff1d6;
+  --color-amber-ink: #7a4a00;
+  --color-green-bg: #ddf1ea;
+  --color-green-ink: #064a3d;
+  --color-red-ink: #8a1f17;
+  --color-red-bg: #fbe4e1;
+  --color-past: #e9eeeb;
+
+  /* the trainer's brand: set at runtime from the server (see src/brand) */
+  --color-brand: var(--brand);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+}
+
+:root {
+  --brand: #0b6e5c;
+  --brand-contrast: #ffffff;
+  --brand-ink: #0b6e5c;
+  --brand-soft: color-mix(in srgb, var(--brand) 12%, white);
+}
+
+html {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+}
+
+/* a visible focus ring everywhere (keyboard users, switch access) */
+:focus-visible {
+  outline: 3px solid var(--brand-ink);
+  outline-offset: 2px;
+}
+
+/* a native <dialog> opened with showModal(): the page behind must not scroll */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
