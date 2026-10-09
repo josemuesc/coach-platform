@@ -45,6 +45,16 @@ public final class ConfirmationRules {
         requireNotAfterWindow(endsAt, closesHoursAfterEnd);
     }
 
+    /** Whether the coach may ask for the code right now; derived from {@link #requireMayIssue}. */
+    public boolean mayIssue(Instant startsAt, Instant endsAt, int opensMinutesBefore, int closesHoursAfterEnd) {
+        try {
+            requireMayIssue(startsAt, endsAt, opensMinutesBefore, closesHoursAfterEnd);
+            return true;
+        } catch (SchedulingRuleException e) {
+            return false;
+        }
+    }
+
     /**
      * A valid code was scanned by the student who owns {@code status}. The scan counts from the class's start (before that
      * it is CLASS_NOT_STARTED, because a scan marks the class) until {@code closesHoursAfterEnd} after its end (inclusive).

@@ -201,4 +201,16 @@ class ConfirmationRulesTest {
         assertThat(ConfirmationRules.isOnlyMarkedByCoach(AttendanceStatus.SCHEDULED, false)).isFalse();
         assertThat(ConfirmationRules.isOnlyMarkedByCoach(AttendanceStatus.CANCELLED_BY_COACH, false)).isFalse();
     }
+
+    // ---- mayIssue: the flag the frontend shows ---------------------------------------------------------
+
+    @Test
+    void mayIssueFollowsTheWindowToTheSecond() {
+        Instant start = local("2026-10-12T14:00");
+        Instant end = local("2026-10-12T15:00");
+        assertThat(new ConfirmationRules(clockAt("2026-10-12T13:44:59")).mayIssue(start, end, 15, 2)).isFalse();
+        assertThat(new ConfirmationRules(clockAt("2026-10-12T13:45")).mayIssue(start, end, 15, 2)).isTrue();
+        assertThat(new ConfirmationRules(clockAt("2026-10-12T17:00")).mayIssue(start, end, 15, 2)).isTrue();
+        assertThat(new ConfirmationRules(clockAt("2026-10-12T17:00:01")).mayIssue(start, end, 15, 2)).isFalse();
+    }
 }

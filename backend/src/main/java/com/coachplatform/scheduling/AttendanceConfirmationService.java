@@ -95,7 +95,9 @@ public class AttendanceConfirmationService {
         SchedulingSettings settings = coaches.schedulingSettings(TenantContext.get());
         confirmation.requireMayIssue(event.getStartsAt(), event.getEndsAt(), settings.qrOpenMinutesBefore(), settings.qrCloseHoursAfterEnd());
         QrTokenRules.IssuedToken issued = qr.issue(eventId);
-        return new QrView(issued.token(), frontendUrl + "/qr#t=" + issued.token(), issued.validForSeconds(), issued.expiresAt());
+        return new QrView(issued.token(), frontendUrl + "/qr#t=" + issued.token(), issued.validForSeconds(), issued.expiresAt(),
+                event.getStartsAt().minus(java.time.Duration.ofMinutes(settings.qrOpenMinutesBefore())),
+                event.getEndsAt().plus(java.time.Duration.ofHours(settings.qrCloseHoursAfterEnd())));
     }
 
     // ---- the student scans it ---------------------------------------------------------------------------------

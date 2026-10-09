@@ -8,6 +8,7 @@ import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.I
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.REASON_REQUIRED;
 
 import com.coachplatform.billing.api.Modality;
+import com.coachplatform.scheduling.api.EventPhase;
 import com.coachplatform.scheduling.api.EventStatus;
 import java.time.Clock;
 import java.time.Instant;
@@ -22,6 +23,15 @@ public final class EventRules {
 
     public EventRules(Clock clock) {
         this.clock = clock;
+    }
+
+    /** PAST from the end instant on, NOW from the start instant until the end, UPCOMING before the start. */
+    public EventPhase phase(Instant startsAt, Instant endsAt) {
+        Instant now = clock.instant();
+        if (!now.isBefore(endsAt)) {
+            return EventPhase.PAST;
+        }
+        return now.isBefore(startsAt) ? EventPhase.UPCOMING : EventPhase.NOW;
     }
 
     /** The valid range of a semi-personalized capacity, also used for the coach's default. */

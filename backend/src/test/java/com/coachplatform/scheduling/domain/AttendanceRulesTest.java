@@ -72,4 +72,28 @@ class AttendanceRulesTest {
                     .as(status.name()).isEqualTo(Code.INVALID_STATE);
         }
     }
+
+    // ---- mayMark: the flag the frontend shows ---------------------------------------------------------
+
+    @Test
+    void mayMarkIsTrueOnlyFromTheStartWhileTheCycleIsActive() {
+        assertThat(at("2026-10-12T13:59:59").mayMark(AttendanceStatus.SCHEDULED, CLASS_AT, true)).isFalse();
+        assertThat(at("2026-10-12T14:00").mayMark(AttendanceStatus.SCHEDULED, CLASS_AT, true)).isTrue();
+        assertThat(at("2026-10-12T15:00").mayMark(AttendanceStatus.SCHEDULED, CLASS_AT, false)).isFalse();
+    }
+
+    @Test
+    void mayMarkAllowsSwitchingAMarkedResultOnlyWhileTheCycleIsActive() {
+        assertThat(at("2026-10-13T09:00").mayMark(AttendanceStatus.ATTENDED, CLASS_AT, true)).isTrue();
+        assertThat(at("2026-10-13T09:00").mayMark(AttendanceStatus.NO_SHOW, CLASS_AT, true)).isTrue();
+        assertThat(at("2026-10-13T09:00").mayMark(AttendanceStatus.ATTENDED, CLASS_AT, false)).isFalse();
+    }
+
+    @Test
+    void mayMarkIsFalseForPlacesThatAreNotLive() {
+        for (AttendanceStatus s : new AttendanceStatus[] {AttendanceStatus.CANCELLED_ON_TIME, AttendanceStatus.RESCHEDULED,
+                AttendanceStatus.CANCELLED_BY_COACH}) {
+            assertThat(at("2026-10-12T15:00").mayMark(s, CLASS_AT, true)).as(s.name()).isFalse();
+        }
+    }
 }

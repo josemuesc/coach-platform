@@ -41,6 +41,16 @@ public final class CancellationPolicy {
         }
     }
 
+    /** Whether the student could cancel this place right now; derived from {@link #requireStudentMayCancel}. */
+    public boolean mayStudentCancel(AttendanceStatus status, Instant startsAt, int windowHours) {
+        try {
+            requireStudentMayCancel(status, startsAt, windowHours);
+            return true;
+        } catch (SchedulingRuleException e) {
+            return false;
+        }
+    }
+
     /**
      * The coach may ALWAYS cancel a scheduled class (no window, even after the start) but must give a reason. This is
      * also how a late student cancellation is forgiven: the coach cancels it instead of marking it attended/no-show.

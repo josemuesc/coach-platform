@@ -25,6 +25,24 @@ public final class AttendanceRules {
         this.clock = clock;
     }
 
+    /**
+     * Whether the coach could mark (or switch the result of) this place right now. Derived from {@link #mark}, so the flag the
+     * frontend shows can never disagree with what the server would accept.
+     */
+    public boolean mayMark(AttendanceStatus current, Instant startsAt, boolean cycleActive) {
+        return accepts(current, AttendanceStatus.ATTENDED, startsAt, cycleActive)
+                || accepts(current, AttendanceStatus.NO_SHOW, startsAt, cycleActive);
+    }
+
+    private boolean accepts(AttendanceStatus current, AttendanceStatus target, Instant startsAt, boolean cycleActive) {
+        try {
+            mark(current, target, startsAt, cycleActive);
+            return true;
+        } catch (SchedulingRuleException e) {
+            return false;
+        }
+    }
+
     public Outcome mark(AttendanceStatus current, AttendanceStatus target, Instant startsAt, boolean cycleActive) {
         if (target != AttendanceStatus.ATTENDED && target != AttendanceStatus.NO_SHOW) {
             throw new SchedulingRuleException(INVALID_STATE, "A class can only be marked ATTENDED or NO_SHOW");

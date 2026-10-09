@@ -203,6 +203,26 @@ class AuditCoverageTest extends SchedulingApiTest {
     // ================================================================= renewal transfer
 
     @Test
+    void everySwitchOfTheResultLeavesItsOwnMarkLineWithThePreviousAndTheNewValue() throws Exception {
+        var coach = newCoach(8);
+        var ana = personalized(coach, "Ana");
+        String place = attendanceId(studentBooked(ana, at("2026-11-06", "10:00")));
+
+        goTo("2026-11-06", "10:30");
+        mark(coach, place, "ATTENDED").andExpect(status().isOk());
+        advance(java.time.Duration.ofMinutes(1));
+        mark(coach, place, "NO_SHOW").andExpect(status().isOk());
+        advance(java.time.Duration.ofMinutes(1));
+        mark(coach, place, "ATTENDED").andExpect(status().isOk());
+
+        assertThat(lines(coach, place)).containsExactly("BOOK/STUDENT/STUDENT", "MARK/COACH/COACH", "MARK/COACH/COACH", "MARK/COACH/COACH");
+        String body = audit(coach, place);
+        assertThat(JsonPath.<List<Object>>read(body, "$[1:].previousStatus")).containsExactly("SCHEDULED", "ATTENDED", "NO_SHOW");
+        assertThat(JsonPath.<List<Object>>read(body, "$[1:].newStatus")).containsExactly("ATTENDED", "NO_SHOW", "ATTENDED");
+        assertThat(classesUsed(coach, ana)).as("switching never changes the count").isEqualTo(1);
+    }
+
+    @Test
     void aRenewalLeavesATransferLineNamingTheSourceAndTheDestinationCycle() throws Exception {
         var coach = newCoach(8);
         var ana = personalized(coach, "Ana");

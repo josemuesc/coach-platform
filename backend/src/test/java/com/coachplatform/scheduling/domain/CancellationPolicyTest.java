@@ -101,4 +101,15 @@ class CancellationPolicyTest {
         assertThatCode(() -> policy.requireCoachMayCancel(AttendanceStatus.SCHEDULED, "Perdonada: llovía muy fuerte"))
                 .doesNotThrowAnyException();
     }
+
+    // ---- mayStudentCancel: the flag the frontend shows -------------------------------------------------
+
+    @Test
+    void mayStudentCancelMatchesTheWindowAndTheStatus() {
+        assertThat(at("2026-10-12T12:00").mayStudentCancel(AttendanceStatus.SCHEDULED, CLASS_AT, 2)).isTrue();
+        assertThat(at("2026-10-12T12:00:01").mayStudentCancel(AttendanceStatus.SCHEDULED, CLASS_AT, 2)).isFalse();
+        assertThat(at("2026-10-12T14:00").mayStudentCancel(AttendanceStatus.SCHEDULED, CLASS_AT, 0)).isFalse();
+        assertThat(at("2026-10-12T08:00").mayStudentCancel(AttendanceStatus.ATTENDED, CLASS_AT, 2)).isFalse();
+        assertThat(at("2026-10-12T08:00").mayStudentCancel(AttendanceStatus.CANCELLED_BY_COACH, CLASS_AT, 2)).isFalse();
+    }
 }
