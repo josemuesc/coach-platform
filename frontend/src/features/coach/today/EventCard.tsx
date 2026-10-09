@@ -5,7 +5,7 @@ import { Chip } from '../../../ui/Chip';
 import { CheckIcon, CrossIcon } from '../../../ui/icons';
 import type { MarkRequest } from './MarkConfirmDialog';
 import type { Attendee, EventView } from './queries';
-import { Avatar, confirmationText, eventTitle, markRequest, modalityLabel, pendingToMark, seatsText } from './shared';
+import { Avatar, attendeeNames, confirmationText, markRequest, modalityLabel, pendingToMark, seatsText } from './shared';
 
 interface Props {
   event: EventView;
@@ -58,8 +58,7 @@ function PastCard({ event, onOpenSheet }: Props) {
   const toMark = pendingToMark(event).length;
   return (
     <div className="flex-1 rounded-[18px] bg-past p-3">
-      <p className="font-display text-base font-bold">{eventTitle(event)}</p>
-      <p className="text-sm text-ink-2">{modalityLabel(event)}</p>
+      <p className="font-display text-base font-bold">{modalityLabel(event)}</p>
       <ul className="mt-2 flex flex-col gap-1">
         {event.attendees.map((a) => (
           <li key={a.attendanceId} className="flex items-center justify-between gap-2 text-sm">
@@ -85,11 +84,11 @@ function UpcomingCard({ event, nowMs }: Props) {
   return (
     <div className="flex-1 rounded-[18px] border border-line bg-white p-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="font-display text-base font-bold">{eventTitle(event)}</p>
+        <p className="font-display text-base font-bold">{modalityLabel(event)}</p>
         {hasMinor && <Chip tone="amber">Menor</Chip>}
       </div>
       <p className="text-sm text-ink-2">
-        {modalityLabel(event)}
+        {attendeeNames(event)}
         {event.modality === 'SEMI_PERSONALIZED' && ` · ${seatsText(event)}`}
       </p>
       <p className="mt-1 text-sm font-semibold text-brand-ink">{untilText(event.startsAt, nowMs)}</p>
@@ -108,7 +107,7 @@ function NowCard({ event, onMark, onOpenSheet }: Props) {
       </div>
       <h3 className="mt-2 font-display text-[19px] font-bold leading-tight">
         <button type="button" onClick={() => onOpenSheet(event.id)} className="min-h-11 text-left underline underline-offset-4">
-          {eventTitle(event)}
+          {modalityLabel(event)}
         </button>
       </h3>
       <div className="mt-1">

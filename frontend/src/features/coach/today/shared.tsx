@@ -11,9 +11,9 @@ export function seatsText(event: EventView): string {
   return `${event.occupied} de ${event.capacity} cupos`;
 }
 
-export function eventTitle(event: EventView): string {
-  const names = event.attendees.map((a) => a.studentName);
-  return names.length === 0 ? modalityLabel(event) : names.join(', ');
+/** Who is in the class, for cards that have no row per student. */
+export function attendeeNames(event: EventView): string {
+  return event.attendees.map((a) => a.studentName).join(', ');
 }
 
 export function eventLabel(event: EventView): string {
@@ -22,7 +22,7 @@ export function eventLabel(event: EventView): string {
 
 /** What the student did about the class, in words, for the row under their name. */
 export function confirmationText(a: Attendee): string {
-  if (!a.studentConfirmed) return 'Sin confirmar';
+  if (!a.studentConfirmed) return a.onlyMarkedByCoach ? 'Marcado por ti' : 'Sin confirmar';
   const at = a.confirmedAt ? ` ${timeParts(a.confirmedAt).time}` : '';
   return a.confirmationMethod === 'QR' ? `QR${at}` : 'Confirmó después';
 }

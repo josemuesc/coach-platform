@@ -60,6 +60,23 @@ describe('EventCard obeys the flags the server computed', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('titles the in-progress card with the kind of class, and the name appears once (in its row)', () => {
+    show(event());
+    expect(screen.getByRole('button', { name: 'Personalizada' })).toBeInTheDocument();
+    expect(screen.getAllByText('Ana Gómez')).toHaveLength(1);
+  });
+
+  it('says "Marcado por ti" for a mark the student never confirmed, and the QR time when they did', () => {
+    show(event({ attendees: [attendee({ status: 'ATTENDED', onlyMarkedByCoach: true, canMark: false })] }));
+    expect(screen.getByText('Marcado por ti')).toBeInTheDocument();
+    expect(screen.queryByText('Sin confirmar')).toBeNull();
+  });
+
+  it('keeps "Sin confirmar" for a class not yet marked', () => {
+    show(event());
+    expect(screen.getByText('Sin confirmar')).toBeInTheDocument();
+  });
+
   it('flags a minor and shows how the student confirmed', () => {
     show(event({ attendees: [attendee({ minor: true, studentConfirmed: true, confirmationMethod: 'QR', confirmedAt: '2026-10-09T15:02:00Z' })] }));
     expect(screen.getByText('Menor')).toBeInTheDocument();

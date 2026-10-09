@@ -77,10 +77,16 @@ test('marking asks first, keeps the focus, and only then uses up the class', asy
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('listitem').filter({ hasText: 'Ana Gómez' }).getByText('Asistió')).toBeVisible();
   await expect(page.getByText('1 de 2 marcados')).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Ana Gómez' }).getByText('Marcado por ti')).toBeVisible();   // marked by the coach, no QR
   expect(await classesUsed(request, w, ana)).toBe(1);
   // the button that opened the dialog is gone: the focus went to that student's row, not to the void
   await expect(page.locator(`[data-attendance="${a.attendanceId}"]`)).toBeFocused();
 
+  // a click on the bottom bar leaves no focus ring (only the keyboard gets one)
+  const bar = page.getByRole('navigation', { name: 'Secciones del entrenador' });
+  await bar.getByRole('link', { name: 'Alumnos' }).click();
+  expect(await bar.getByRole('link', { name: 'Alumnos' }).evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none');
+  await bar.getByRole('link', { name: 'Hoy' }).click();
   await page.getByRole('button', { name: 'Marcar que Beto Ruiz no vino' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Sí, marcar' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: 'Beto Ruiz' }).getByText('No vino')).toBeVisible();
@@ -97,7 +103,7 @@ test('the sheet marks the pending ones at once and cancels a class with a reason
   moveEvent(a.eventId, -3, 27);
   await openToday(page, w);
 
-  await page.getByRole('button', { name: /Ana Gómez, Beto Ruiz|Beto Ruiz, Ana Gómez/ }).click();
+  await page.getByRole('button', { name: 'Semipersonalizada' }).click();
   const sheet = page.getByRole('dialog', { name: 'Marcar asistencia' });
   await expect(sheet.getByText(/le quedan 8 clases/).first()).toBeVisible();
   await expect(sheet.getByText('Descuenta 1 clase del plan, tanto si asistió como si no vino. Puedes cambiar entre Asistió y No vino, pero no quitar la marca.')).toBeVisible();
@@ -117,7 +123,7 @@ test('cancelling the class lists who is affected, asks for a reason and uses up 
   moveEvent(a.eventId, -3, 27);
   await openToday(page, w);
 
-  await page.getByRole('button', { name: 'Ana Gómez', exact: true }).click();
+  await page.getByRole('button', { name: 'Personalizada', exact: true }).click();
   await page.getByRole('button', { name: 'Cancelar la clase (se pide un motivo)' }).click();
   const dialog = page.getByRole('dialog', { name: 'Cancelar la clase' });
   await expect(dialog.getByText('Ana Gómez')).toBeVisible();
@@ -224,6 +230,6 @@ test('the day, the confirmation dialog and the sheet have no serious accessibili
   await page.getByRole('button', { name: 'Marcar que Ana Gómez asistió' }).click();
   expect(await serious(page)).toEqual([]);
   await page.getByRole('dialog').getByRole('button', { name: 'Cancelar' }).click();
-  await page.getByRole('button', { name: /Ana Gómez, Beto Ruiz|Beto Ruiz, Ana Gómez/ }).click();
+  await page.getByRole('button', { name: 'Semipersonalizada' }).click();
   expect(await serious(page)).toEqual([]);
 });

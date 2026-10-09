@@ -47,6 +47,10 @@ body {
   outline: 3px solid var(--brand-ink);
   outline-offset: 2px;
 }
+/* never after a click or a tap: only the keyboard (or switch access) gets the ring */
+:focus:not(:focus-visible) {
+  outline: none;
+}
 
 /* a native <dialog> opened with showModal(): the page behind must not scroll. Plain stylesheet rules (no injected <style>, no JS) so the strict
    CSP is untouched; overscroll-behavior stops a drag past the dialog's own edge from chaining to the page (the iOS case). */
