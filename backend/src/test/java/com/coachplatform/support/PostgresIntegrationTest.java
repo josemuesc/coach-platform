@@ -24,6 +24,7 @@ public abstract class PostgresIntegrationTest {
 
     @DynamicPropertySource
     static void props(DynamicPropertyRegistry registry) {
+        registry.add("app.qr.secret", () -> "integration-qr-secret-integration-qr-32b");
         registry.add("app.jwt.secret", () -> "integration-secret-integration-secret-32b");
         registry.add("app.jwt.expiration-minutes", () -> 60);
         registry.add("app.billing.expiry-job.run-on-startup", () -> false);

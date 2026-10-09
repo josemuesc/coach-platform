@@ -181,6 +181,16 @@ class ConfirmationRulesTest {
                 .isEqualTo(Code.INVALID_STATE);
     }
 
+    @Test
+    void theConfirmButtonIsOfferedOnlyForAStartedLiveUnconfirmedClassInsideTheWindow() {
+        assertThat(at("2026-10-12T14:00").canConfirmLater(AttendanceStatus.ATTENDED, false, CLASS_AT, 72)).isTrue();
+        assertThat(at("2026-10-12T13:59:59").canConfirmLater(AttendanceStatus.ATTENDED, false, CLASS_AT, 72)).isFalse();
+        assertThat(at("2026-10-15T14:00").canConfirmLater(AttendanceStatus.SCHEDULED, false, CLASS_AT, 72)).isTrue();
+        assertThat(at("2026-10-15T14:00:01").canConfirmLater(AttendanceStatus.SCHEDULED, false, CLASS_AT, 72)).isFalse();
+        assertThat(at("2026-10-12T20:00").canConfirmLater(AttendanceStatus.ATTENDED, true, CLASS_AT, 72)).isFalse();
+        assertThat(at("2026-10-12T20:00").canConfirmLater(AttendanceStatus.CANCELLED_ON_TIME, false, CLASS_AT, 72)).isFalse();
+    }
+
     // ---- what the coach sees -------------------------------------------------------------------------
 
     @Test

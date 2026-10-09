@@ -9,10 +9,12 @@ import com.coachplatform.coach.api.SchedulingSettings;
 import com.coachplatform.common.ApiException;
 import com.coachplatform.common.ConcurrentChangeException;
 import com.coachplatform.common.ConflictRetry;
+import com.coachplatform.scheduling.api.ActorRole;
 import com.coachplatform.scheduling.api.AffectedStudent;
 import com.coachplatform.scheduling.api.AgendaView;
 import com.coachplatform.scheduling.api.AttendanceStatus;
 import com.coachplatform.scheduling.api.AttendanceView;
+import com.coachplatform.scheduling.api.AuditMethod;
 import com.coachplatform.scheduling.api.CancelResult;
 import com.coachplatform.scheduling.api.EventCancelResult;
 import com.coachplatform.scheduling.api.EventStatus;
@@ -20,7 +22,6 @@ import com.coachplatform.scheduling.api.EventView;
 import com.coachplatform.scheduling.api.MarkItem;
 import com.coachplatform.scheduling.api.SlotView;
 import com.coachplatform.scheduling.api.StudentSlotView;
-import com.coachplatform.scheduling.domain.AttendanceRules;
 import com.coachplatform.scheduling.domain.BookingRules;
 import com.coachplatform.scheduling.domain.BookingRules.Action;
 import com.coachplatform.scheduling.domain.BookingRules.CycleSnapshot;
@@ -87,7 +88,7 @@ public class SchedulingService {
     private final SchedulingViews views;
     private final BookingRules bookingRules;
     private final CancellationPolicy cancellation;
-    private final AttendanceRules attendanceRules;
+    private final AttendanceMarker marker;
     private final EventRules eventRules;
     private final SlotCalendar calendar;
     private final Clock clock;
@@ -96,7 +97,7 @@ public class SchedulingService {
     SchedulingService(StudentService students, BillingService billing, CoachService coaches, ClassSessionRepository events,
                       SessionAttendanceRepository attendances, AvailabilityRuleRepository availability,
                       AvailabilityBlockRepository blocks, SchedulingViews views, BookingRules bookingRules,
-                      CancellationPolicy cancellation, AttendanceRules attendanceRules, EventRules eventRules,
+                      CancellationPolicy cancellation, AttendanceMarker marker, EventRules eventRules,
                       SlotCalendar calendar, Clock clock, TransactionTemplate tx) {
         this.tx = tx;
         this.students = students;
@@ -109,7 +110,7 @@ public class SchedulingService {
         this.views = views;
         this.bookingRules = bookingRules;
         this.cancellation = cancellation;
-        this.attendanceRules = attendanceRules;
+        this.marker = marker;
         this.eventRules = eventRules;
         this.calendar = calendar;
         this.clock = clock;
@@ -392,14 +393,7 @@ public class SchedulingService {
     }
 
     private void markOne(SessionAttendance place, AttendanceStatus target, UUID coachUserId) {
-        ClassSession event = events.findById(place.getSessionId()).orElseThrow(EventNotFoundException::new);
-        CycleSummary cycle = billing.cycle(place.getCycleId());
-        var outcome = attendanceRules.mark(place.getStatus(), target, event.getStartsAt(), cycle.status() == CycleStatus.ACTIVE);
-        if (outcome.consumesClass()) {
-            billing.consumeClass(place.getCycleId());                                   // before the status changes: it is still "pending"
-        }
-        place.mark(outcome.newStatus(), coachUserId, clock.instant());
-        attendances.saveAndFlush(place);
+        marker.mark(place, target, coachUserId, ActorRole.COACH, AuditMethod.COACH);
     }
 
     // =================================================================================================

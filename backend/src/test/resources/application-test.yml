@@ -10,6 +10,8 @@ spring:
     enabled: false
 
 app:
+  qr:
+    secret: test-qr-secret-test-qr-secret-test-qr-32b
   jwt:
     secret: test-secret-test-secret-test-secret-32b
     expiration-minutes: 144000

@@ -26,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     public static final String LOGIN_PATH = "/api/auth/login";
+    static final String CONFIRM_QR_PATH = "/api/student/attendances/confirm-qr";
     public static final String INVITATION_PREVIEW_PATH = "/api/invitations/preview";
     public static final String INVITATION_ACCEPT_PATH = "/api/invitations/accept";
 
@@ -90,12 +91,22 @@ public class SecurityConfig {
     }
 
     @Bean
+    @Qualifier("qrScanIpLimiter")
+    AttemptLimiter qrScanIpLimiter(Clock clock,
+                                   @Value("${app.security.qr-scan-ip.max-failures:30}") int max,
+                                   @Value("${app.security.window-minutes:15}") long windowMinutes) {
+        return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
+    }
+
+    @Bean
     RateLimitFilter rateLimitFilter(@Qualifier("loginIpLimiter") AttemptLimiter loginIp,
-                                    @Qualifier("invitationIpLimiter") AttemptLimiter invitationIp) {
+                                    @Qualifier("invitationIpLimiter") AttemptLimiter invitationIp,
+                                    @Qualifier("qrScanIpLimiter") AttemptLimiter qrScanIp) {
         return new RateLimitFilter(Map.of(
                 LOGIN_PATH, loginIp,
                 INVITATION_PREVIEW_PATH, invitationIp,
-                INVITATION_ACCEPT_PATH, invitationIp));
+                INVITATION_ACCEPT_PATH, invitationIp,
+                CONFIRM_QR_PATH, qrScanIp));
     }
 
     /** The filters belong to the security chain only; stop Spring Boot from also registering them in the servlet container. */

@@ -35,6 +35,10 @@ interface SessionAttendanceRepository extends JpaRepository<SessionAttendance, U
     @Query("select a from SessionAttendance a where a.sessionId in :ids and a.status in " + LIVE + " order by a.createdAt")
     List<SessionAttendance> findLiveBySessions(@Param("ids") Collection<UUID> ids);
 
+    /** The student's live place in an event (at most one: a unique index guarantees it). */
+    @Query("select a from SessionAttendance a where a.sessionId = :sessionId and a.studentId = :studentId and a.status in " + LIVE)
+    Optional<SessionAttendance> findLiveBySessionAndStudent(@Param("sessionId") UUID sessionId, @Param("studentId") UUID studentId);
+
     List<SessionAttendance> findBySessionId(UUID sessionId);
 
     List<SessionAttendance> findByStudentIdOrderByCreatedAtDesc(UUID studentId);

@@ -2,6 +2,7 @@ package com.coachplatform.scheduling;
 
 import com.coachplatform.scheduling.api.AttendanceView;
 import com.coachplatform.scheduling.api.AttendeeView;
+import com.coachplatform.scheduling.domain.ConfirmationRules;
 import com.coachplatform.scheduling.api.EventStatus;
 import com.coachplatform.scheduling.api.EventView;
 import com.coachplatform.students.StudentService;
@@ -56,7 +57,9 @@ class SchedulingViews {
         return list.stream().map(e -> {
             List<SessionAttendance> places = bySession.getOrDefault(e.getId(), List.of());
             List<AttendeeView> attendees = places.stream().map(a -> new AttendeeView(a.getId(), a.getStudentId(),
-                    names.get(a.getStudentId()), a.getStatus(), a.isOverride(), a.getOverrideReason())).toList();
+                    names.get(a.getStudentId()), a.getStatus(), a.isOverride(), a.getOverrideReason(), a.isConfirmed(),
+                    a.getStudentConfirmationMethod(), a.getStudentConfirmedAt(),
+                    ConfirmationRules.isOnlyMarkedByCoach(a.getStatus(), a.isConfirmed()))).toList();
             int occupied = places.size();
             return new EventView(e.getId(), e.getStartsAt(), e.getEndsAt(), e.getModality(), e.getCapacity(), occupied,
                     Math.max(0, e.getCapacity() - occupied), e.getStatus(), attendees);
@@ -84,7 +87,9 @@ class SchedulingViews {
             return new AttendanceView(a.getId(), e.getId(), forCoach ? a.getStudentId() : null, names.get(a.getStudentId()),
                     a.getCycleId(), e.getStartsAt(), e.getEndsAt(), e.getModality(), e.getCapacity(),
                     e.getStatus() == EventStatus.CANCELLED ? 0 : counts.getOrDefault(e.getId(), 0), a.getStatus(),
-                    a.getRescheduledFrom(), a.getCancelReason(), a.isOverride(), a.getOverrideReason());
+                    a.getRescheduledFrom(), a.getCancelReason(), a.isOverride(), a.getOverrideReason(), a.isConfirmed(),
+                    a.getStudentConfirmationMethod(), a.getStudentConfirmedAt(),
+                    ConfirmationRules.isOnlyMarkedByCoach(a.getStatus(), a.isConfirmed()));
         }).toList();
     }
 

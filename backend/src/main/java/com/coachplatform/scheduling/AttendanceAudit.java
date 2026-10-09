@@ -82,6 +82,7 @@ class AttendanceAudit extends TenantScopedEntity {
     AttendanceStatus getPreviousStatus() { return previousStatus; }
     AttendanceStatus getNewStatus() { return newStatus; }
     AuditMethod getMethod() { return method; }
+    UUID getActorUserId() { return actorUserId; }
     ActorRole getActorRole() { return actorRole; }
     String getReason() { return reason; }
     Instant getOccurredAt() { return occurredAt; }

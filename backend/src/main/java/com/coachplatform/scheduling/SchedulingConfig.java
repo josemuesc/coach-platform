@@ -1,6 +1,13 @@
 package com.coachplatform.scheduling;
 
 import com.coachplatform.scheduling.domain.AttendanceRules;
+import com.coachplatform.scheduling.domain.ConfirmationRules;
+import com.coachplatform.scheduling.domain.QrTokenRules;
+import com.coachplatform.security.AttemptLimiter;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import com.coachplatform.scheduling.domain.BookingRules;
 import com.coachplatform.scheduling.domain.CancellationPolicy;
 import com.coachplatform.scheduling.domain.EventRules;
@@ -39,5 +46,25 @@ class SchedulingConfig {
     @Bean
     EventRules eventRules(Clock clock) {
         return new EventRules(clock);
+    }
+
+    @Bean
+    ConfirmationRules confirmationRules(Clock clock) {
+        return new ConfirmationRules(clock);
+    }
+
+    /** The secret signs the rotating event code; QrTokenRules refuses anything under 32 bytes, so the application will not start with a weak one. */
+    @Bean
+    QrTokenRules qrTokenRules(Clock clock, @Value("${app.qr.secret}") String secret) {
+        return new QrTokenRules(clock, secret.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** Failed scans per student (an unknown, stale or foreign code). The per-IP limit lives in the RateLimitFilter. */
+    @Bean
+    @Qualifier("qrScanUserLimiter")
+    AttemptLimiter qrScanUserLimiter(Clock clock,
+                                     @Value("${app.security.qr-scan-user.max-failures:10}") int max,
+                                     @Value("${app.security.qr-scan-user.window-minutes:10}") long windowMinutes) {
+        return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
     }
 }

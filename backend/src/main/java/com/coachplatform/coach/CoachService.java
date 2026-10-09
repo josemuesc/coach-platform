@@ -48,7 +48,8 @@ public class CoachService {
     @Transactional(readOnly = true)
     public SchedulingSettings schedulingSettings(UUID coachId) {
         CoachSettings s = settings.findById(coachId).orElseThrow();
-        return new SchedulingSettings(s.getCancelWindowHours(), s.getClassDurationMinutes(), s.getDefaultGroupCapacity());
+        return new SchedulingSettings(s.getCancelWindowHours(), s.getClassDurationMinutes(), s.getDefaultGroupCapacity(),
+                s.getConfirmationWindowHours(), s.getQrOpenMinutesBefore(), s.getQrCloseHoursAfterEnd());
     }
 
     @Transactional(readOnly = true)

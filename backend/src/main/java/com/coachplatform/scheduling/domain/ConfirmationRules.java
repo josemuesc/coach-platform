@@ -80,6 +80,12 @@ public final class ConfirmationRules {
         return new Outcome(false, true, false);
     }
 
+    /** Whether the student could still confirm this class from their history right now (what the frontend shows as a button). */
+    public boolean canConfirmLater(AttendanceStatus status, boolean alreadyConfirmed, Instant startsAt, int windowHours) {
+        Instant now = clock.instant();
+        return status.isLive() && !alreadyConfirmed && !now.isBefore(startsAt) && !now.isAfter(startsAt.plus(Duration.ofHours(windowHours)));
+    }
+
     /** Marked by the coach and never confirmed by the student. */
     public static boolean isOnlyMarkedByCoach(AttendanceStatus status, boolean confirmed) {
         return (status == AttendanceStatus.ATTENDED || status == AttendanceStatus.NO_SHOW) && !confirmed;

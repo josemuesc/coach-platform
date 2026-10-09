@@ -19,7 +19,6 @@ import com.coachplatform.coach.api.SchedulingSettings;
 import com.coachplatform.common.ApiException;
 import com.coachplatform.common.ConcurrentChangeException;
 import com.coachplatform.scheduling.api.AttendanceView;
-import com.coachplatform.scheduling.domain.AttendanceRules;
 import com.coachplatform.scheduling.domain.BookingRules;
 import com.coachplatform.scheduling.domain.CancellationPolicy;
 import com.coachplatform.scheduling.domain.EventRules;
@@ -90,10 +89,10 @@ class SchedulingRetryTest {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         SlotCalendar calendar = new SlotCalendar(BOGOTA);
         service = new SchedulingService(students, billing, coaches, events, attendances, availability, blocks, views,
-                new BookingRules(clock, calendar), new CancellationPolicy(clock), new AttendanceRules(clock), new EventRules(clock),
+                new BookingRules(clock, calendar), new CancellationPolicy(clock), mock(AttendanceMarker.class), new EventRules(clock),
                 calendar, clock, tx);
 
-        when(coaches.schedulingSettings(any())).thenReturn(new SchedulingSettings(2, 60, 4));
+        when(coaches.schedulingSettings(any())).thenReturn(new SchedulingSettings(2, 60, 4, 72, 15, 2));
         when(billing.activeCycle(studentId)).thenReturn(Optional.of(new CycleSummary(UUID.randomUUID(), studentId, UUID.randomUUID(),
                 LocalDate.of(2026, 10, 6), LocalDate.of(2026, 11, 6), LocalDate.of(2026, 11, 6), 8, 0, 8, 0, 0,
                 CycleStatus.ACTIVE, Modality.PERSONALIZED)));

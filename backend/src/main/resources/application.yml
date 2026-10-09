@@ -16,6 +16,9 @@ spring:
     enabled: true
 
 app:
+  qr:
+    # At least 32 bytes: signs the rotating event code the student scans (HMAC-SHA256). openssl rand -base64 48
+    secret: ${APP_QR_SECRET}
   jwt:
     secret: ${JWT_SECRET}
     expiration-minutes: ${JWT_EXPIRATION_MINUTES:480}
