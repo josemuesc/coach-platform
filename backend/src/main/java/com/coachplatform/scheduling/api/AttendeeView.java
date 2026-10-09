@@ -1,5 +1,6 @@
 package com.coachplatform.scheduling.api;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -8,6 +9,6 @@ import java.util.UUID;
  * so is whether the student confirmed the class ({@code onlyMarkedByCoach}: marked by the coach, never confirmed).
  */
 public record AttendeeView(UUID attendanceId, UUID studentId, String studentName, AttendanceStatus status,
-                           boolean override, String overrideReason, boolean studentConfirmed,
-                           ConfirmationMethod confirmationMethod, Instant confirmedAt, boolean onlyMarkedByCoach) {
+                           boolean override, @Schema(nullable = true) String overrideReason, boolean studentConfirmed,
+                           @Schema(nullable = true) ConfirmationMethod confirmationMethod, @Schema(nullable = true) Instant confirmedAt, boolean onlyMarkedByCoach) {
 }

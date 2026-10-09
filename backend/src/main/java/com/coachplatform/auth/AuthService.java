@@ -152,7 +152,9 @@ public class AuthService {
     @Transactional(readOnly = true)
     public MeResponse me(UUID userId, UUID coachId, UserRole role) {
         AppUser user = users.findById(userId).orElseThrow(() -> new BadCredentialsException("Invalid credentials"));
-        return new MeResponse(userId, coachId, role.name(), user.getPasswordChangedAt(), user.getPasswordChangeMethod());
+        var brand = coaches.brand(coachId);
+        return new MeResponse(userId, coachId, role.name(), brand.brandName(), brand.primaryColor(), user.getPasswordChangedAt(),
+                user.getPasswordChangeMethod());
     }
 
     /** True while a token issued under {@code epoch} is still current for the user (a deleted user is never current). */

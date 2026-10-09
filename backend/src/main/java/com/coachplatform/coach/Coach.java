@@ -55,4 +55,10 @@ public class Coach {
     public UUID getId() { return id; }
     public String getName() { return name; }
     public String getBrandName() { return brandName; }
+    public String getPrimaryColor() { return primaryColor; }
+
+    public void updateBrand(String brandName, String primaryColor) {
+        this.brandName = brandName;
+        this.primaryColor = primaryColor;
+    }
 }

@@ -1,9 +1,10 @@
 package com.coachplatform.coach.api;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.Instant;
 
 public record CoachSettingsView(int cancelWindowHours, int classDurationMinutes, int expiringSoonDays,
                                 int expiringSoonClasses, int maxExtensionDays, int defaultGroupCapacity,
                                 int confirmationWindowHours, int qrOpenMinutesBefore, int qrCloseHoursAfterEnd,
-                                boolean gymConsentConfirmed, Instant gymConsentConfirmedAt) {
+                                boolean gymConsentConfirmed, @Schema(nullable = true) Instant gymConsentConfirmedAt) {
 }

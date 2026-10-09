@@ -46,11 +46,15 @@ public final class AuthDtos {
     }
 
     /**
+     * @param brandName the trainer's brand: the coach's own, or the one of the coach the student belongs to
+     * @param primaryColor {@code #RRGGBB} or null (the client uses its default)
      * @param passwordChangedAt when the password last changed (null = never: it is still the one set at registration/invitation)
      * @param passwordChangedBy SELF, or COACH_LINK when it was set through a reset link the coach handed over (the frontend warns
      *                          the student in that case); null if never changed
      */
-    public record MeResponse(UUID userId, UUID coachId, String role, java.time.Instant passwordChangedAt,
-                             PasswordChangeMethod passwordChangedBy) {
+    public record MeResponse(UUID userId, UUID coachId, String role, String brandName,
+                             @io.swagger.v3.oas.annotations.media.Schema(nullable = true) String primaryColor,
+                             @io.swagger.v3.oas.annotations.media.Schema(nullable = true) java.time.Instant passwordChangedAt,
+                             @io.swagger.v3.oas.annotations.media.Schema(nullable = true) PasswordChangeMethod passwordChangedBy) {
     }
 }

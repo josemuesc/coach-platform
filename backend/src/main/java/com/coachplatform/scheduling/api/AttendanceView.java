@@ -1,5 +1,6 @@
 package com.coachplatform.scheduling.api;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import com.coachplatform.billing.api.Modality;
 import java.time.Instant;
 import java.util.UUID;
@@ -10,9 +11,9 @@ import java.util.UUID;
  * studentConfirmed / confirmationMethod / confirmedAt: the student confirmed the class (QR in person, or later). A mark by the
  * coach with no confirmation is flagged {@code onlyMarkedByCoach}.
  */
-public record AttendanceView(UUID id, UUID eventId, UUID studentId, String studentName, UUID cycleId, Instant startsAt,
+public record AttendanceView(UUID id, UUID eventId, @Schema(nullable = true) UUID studentId, @Schema(nullable = true) String studentName, UUID cycleId, Instant startsAt,
                              Instant endsAt, Modality modality, int capacity, int occupied, AttendanceStatus status,
-                             UUID rescheduledFrom, String cancelReason, boolean override, String overrideReason,
-                             boolean studentConfirmed, ConfirmationMethod confirmationMethod, Instant confirmedAt,
+                             @Schema(nullable = true) UUID rescheduledFrom, @Schema(nullable = true) String cancelReason, boolean override, @Schema(nullable = true) String overrideReason,
+                             boolean studentConfirmed, @Schema(nullable = true) ConfirmationMethod confirmationMethod, @Schema(nullable = true) Instant confirmedAt,
                              boolean onlyMarkedByCoach) {
 }

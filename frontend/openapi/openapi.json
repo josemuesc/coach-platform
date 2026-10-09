@@ -1,0 +1,3314 @@
+{
+  "components" : {
+    "schemas" : {
+      "AcceptConsentRequest" : {
+        "properties" : {
+          "version" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "version" ],
+        "type" : "object"
+      },
+      "AcceptRequest" : {
+        "properties" : {
+          "acceptData" : {
+            "type" : "boolean"
+          },
+          "acceptWhatsapp" : {
+            "type" : "boolean"
+          },
+          "dataVersion" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          },
+          "token" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "whatsappVersion" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "acceptData", "acceptWhatsapp", "token" ],
+        "type" : "object"
+      },
+      "ActiveRequest" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "active" ],
+        "type" : "object"
+      },
+      "AffectedStudent" : {
+        "properties" : {
+          "attendanceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "studentName" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "attendanceId", "studentId" ],
+        "type" : "object"
+      },
+      "AgendaView" : {
+        "properties" : {
+          "events" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EventView"
+            },
+            "type" : "array"
+          },
+          "freeBlocks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SlotView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "events", "freeBlocks" ],
+        "type" : "object"
+      },
+      "AttendanceView" : {
+        "properties" : {
+          "cancelReason" : {
+            "type" : [ "string", "null" ]
+          },
+          "capacity" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "confirmationMethod" : {
+            "enum" : [ "QR", "LATER" ],
+            "type" : [ "string", "null" ]
+          },
+          "confirmedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "cycleId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "eventId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "occupied" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "onlyMarkedByCoach" : {
+            "type" : "boolean"
+          },
+          "override" : {
+            "type" : "boolean"
+          },
+          "overrideReason" : {
+            "type" : [ "string", "null" ]
+          },
+          "rescheduledFrom" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "SCHEDULED", "ATTENDED", "CANCELLED_ON_TIME", "RESCHEDULED", "NO_SHOW", "CANCELLED_BY_COACH" ],
+            "type" : "string"
+          },
+          "studentConfirmed" : {
+            "type" : "boolean"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "studentName" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "capacity", "cycleId", "endsAt", "eventId", "id", "modality", "occupied", "onlyMarkedByCoach", "override", "startsAt", "status", "studentConfirmed" ],
+        "type" : "object"
+      },
+      "AttendeeView" : {
+        "properties" : {
+          "attendanceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "confirmationMethod" : {
+            "enum" : [ "QR", "LATER" ],
+            "type" : [ "string", "null" ]
+          },
+          "confirmedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "onlyMarkedByCoach" : {
+            "type" : "boolean"
+          },
+          "override" : {
+            "type" : "boolean"
+          },
+          "overrideReason" : {
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "SCHEDULED", "ATTENDED", "CANCELLED_ON_TIME", "RESCHEDULED", "NO_SHOW", "CANCELLED_BY_COACH" ],
+            "type" : "string"
+          },
+          "studentConfirmed" : {
+            "type" : "boolean"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "studentName" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "attendanceId", "onlyMarkedByCoach", "override", "status", "studentConfirmed", "studentId", "studentName" ],
+        "type" : "object"
+      },
+      "AuditEntryView" : {
+        "properties" : {
+          "action" : {
+            "enum" : [ "BOOK", "RESCHEDULE", "MARK", "CANCEL", "CONFIRM", "TRANSFER" ],
+            "type" : "string"
+          },
+          "actorRole" : {
+            "enum" : [ "COACH", "STUDENT" ],
+            "type" : "string"
+          },
+          "actorUserId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "method" : {
+            "enum" : [ "COACH", "STUDENT", "QR", "LATER" ],
+            "type" : "string"
+          },
+          "newStatus" : {
+            "enum" : [ "SCHEDULED", "ATTENDED", "CANCELLED_ON_TIME", "RESCHEDULED", "NO_SHOW", "CANCELLED_BY_COACH" ],
+            "type" : "string"
+          },
+          "occurredAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "previousStatus" : {
+            "enum" : [ "SCHEDULED", "ATTENDED", "CANCELLED_ON_TIME", "RESCHEDULED", "NO_SHOW", "CANCELLED_BY_COACH" ],
+            "type" : [ "string", "null" ]
+          },
+          "reason" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "action", "actorRole", "actorUserId", "method", "newStatus", "occurredAt" ],
+        "type" : "object"
+      },
+      "AuthResponse" : {
+        "properties" : {
+          "coachId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "coachId", "role", "token" ],
+        "type" : "object"
+      },
+      "BlockCreated" : {
+        "properties" : {
+          "affectedEvents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EventView"
+            },
+            "type" : "array"
+          },
+          "block" : {
+            "$ref" : "#/components/schemas/BlockSummary"
+          }
+        },
+        "required" : [ "affectedEvents", "block" ],
+        "type" : "object"
+      },
+      "BlockInput" : {
+        "properties" : {
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "reason" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "endsAt", "startsAt" ],
+        "type" : "object"
+      },
+      "BlockSummary" : {
+        "properties" : {
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : [ "string", "null" ]
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "endsAt", "id", "startsAt" ],
+        "type" : "object"
+      },
+      "BookCommand" : {
+        "properties" : {
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "startsAt" ],
+        "type" : "object"
+      },
+      "BrandView" : {
+        "properties" : {
+          "brandName" : {
+            "type" : "string"
+          },
+          "primaryColor" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "brandName" ],
+        "type" : "object"
+      },
+      "CancelEventCommand" : {
+        "properties" : {
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ],
+        "type" : "object"
+      },
+      "CancelResult" : {
+        "properties" : {
+          "cancelled" : {
+            "$ref" : "#/components/schemas/AttendanceView"
+          },
+          "replacement" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/AttendanceView"
+            }, {
+              "type" : "null"
+            } ]
+          }
+        },
+        "required" : [ "cancelled" ],
+        "type" : "object"
+      },
+      "ChangeCapacityCommand" : {
+        "properties" : {
+          "capacity" : {
+            "format" : "int32",
+            "maximum" : 10,
+            "minimum" : 2,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "capacity" ],
+        "type" : "object"
+      },
+      "ChangePasswordRequest" : {
+        "properties" : {
+          "currentPassword" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "newPassword" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "currentPassword" ],
+        "type" : "object"
+      },
+      "ClassRow" : {
+        "properties" : {
+          "attendanceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "canConfirm" : {
+            "type" : "boolean"
+          },
+          "cancelReason" : {
+            "type" : [ "string", "null" ]
+          },
+          "confirmationMethod" : {
+            "enum" : [ "QR", "LATER" ],
+            "type" : [ "string", "null" ]
+          },
+          "date" : {
+            "type" : "string"
+          },
+          "number" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "onlyMarkedByCoach" : {
+            "type" : "boolean"
+          },
+          "override" : {
+            "type" : "boolean"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "SCHEDULED", "ATTENDED", "CANCELLED_ON_TIME", "RESCHEDULED", "NO_SHOW", "CANCELLED_BY_COACH" ],
+            "type" : "string"
+          },
+          "studentConfirmed" : {
+            "type" : "boolean"
+          },
+          "time" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "attendanceId", "canConfirm", "date", "onlyMarkedByCoach", "override", "startsAt", "status", "studentConfirmed", "time" ],
+        "type" : "object"
+      },
+      "CoachBookCommand" : {
+        "properties" : {
+          "override" : {
+            "type" : "boolean"
+          },
+          "overrideReason" : {
+            "type" : "string"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "startsAt" ],
+        "type" : "object"
+      },
+      "CoachCancelCommand" : {
+        "properties" : {
+          "newStartsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "override" : {
+            "type" : "boolean"
+          },
+          "overrideReason" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ],
+        "type" : "object"
+      },
+      "CoachSettingsView" : {
+        "properties" : {
+          "cancelWindowHours" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "classDurationMinutes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "confirmationWindowHours" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "defaultGroupCapacity" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "expiringSoonClasses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "expiringSoonDays" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "gymConsentConfirmed" : {
+            "type" : "boolean"
+          },
+          "gymConsentConfirmedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "maxExtensionDays" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "qrCloseHoursAfterEnd" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "qrOpenMinutesBefore" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "cancelWindowHours", "classDurationMinutes", "confirmationWindowHours", "defaultGroupCapacity", "expiringSoonClasses", "expiringSoonDays", "gymConsentConfirmed", "maxExtensionDays", "qrCloseHoursAfterEnd", "qrOpenMinutesBefore" ],
+        "type" : "object"
+      },
+      "ConfirmQrRequest" : {
+        "properties" : {
+          "token" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "token" ],
+        "type" : "object"
+      },
+      "ConfirmQrResult" : {
+        "properties" : {
+          "alreadyConfirmed" : {
+            "type" : "boolean"
+          },
+          "attendance" : {
+            "$ref" : "#/components/schemas/AttendanceView"
+          },
+          "markedAttended" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "alreadyConfirmed", "attendance", "markedAttended" ],
+        "type" : "object"
+      },
+      "ConfirmResult" : {
+        "properties" : {
+          "alreadyConfirmed" : {
+            "type" : "boolean"
+          },
+          "attendance" : {
+            "$ref" : "#/components/schemas/AttendanceView"
+          }
+        },
+        "required" : [ "alreadyConfirmed", "attendance" ],
+        "type" : "object"
+      },
+      "ConsentItemView" : {
+        "properties" : {
+          "acceptedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "acceptedVersion" : {
+            "type" : [ "string", "null" ]
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "applies" : {
+            "type" : "boolean"
+          },
+          "currentVersion" : {
+            "type" : "string"
+          },
+          "required" : {
+            "type" : "boolean"
+          },
+          "type" : {
+            "enum" : [ "DATA_ADULT", "DATA_GUARDIAN", "WHATSAPP" ],
+            "type" : "string"
+          },
+          "upToDate" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "active", "applies", "currentVersion", "required", "type", "upToDate" ],
+        "type" : "object"
+      },
+      "ConsentTextView" : {
+        "properties" : {
+          "bodyMarkdown" : {
+            "type" : "string"
+          },
+          "required" : {
+            "type" : "boolean"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "type" : {
+            "enum" : [ "DATA_ADULT", "DATA_GUARDIAN", "WHATSAPP" ],
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "bodyMarkdown", "required", "title", "type", "version" ],
+        "type" : "object"
+      },
+      "Cycle" : {
+        "properties" : {
+          "classes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassRow"
+            },
+            "type" : "array"
+          },
+          "cycle" : {
+            "$ref" : "#/components/schemas/CycleSummary"
+          },
+          "otherEntries" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassRow"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "classes", "cycle", "otherEntries" ],
+        "type" : "object"
+      },
+      "CycleSummary" : {
+        "properties" : {
+          "classesIncluded" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "classesLost" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "classesRemaining" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "classesUsed" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "endDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "originalEndDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "pendingMarks" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "planId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "startDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "ACTIVE", "COMPLETED", "EXPIRED" ],
+            "type" : "string"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "classesIncluded", "classesLost", "classesRemaining", "classesUsed", "endDate", "id", "modality", "originalEndDate", "pendingMarks", "planId", "startDate", "status", "studentId" ],
+        "type" : "object"
+      },
+      "EventCancelResult" : {
+        "properties" : {
+          "affectedStudents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AffectedStudent"
+            },
+            "type" : "array"
+          },
+          "event" : {
+            "$ref" : "#/components/schemas/EventView"
+          }
+        },
+        "required" : [ "affectedStudents", "event" ],
+        "type" : "object"
+      },
+      "EventView" : {
+        "properties" : {
+          "attendees" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AttendeeView"
+            },
+            "type" : "array"
+          },
+          "capacity" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "freeSeats" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "occupied" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "SCHEDULED", "CANCELLED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "attendees", "capacity", "endsAt", "freeSeats", "id", "modality", "occupied", "startsAt", "status" ],
+        "type" : "object"
+      },
+      "ExtendCycleCommand" : {
+        "properties" : {
+          "newEndDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "newEndDate", "reason" ],
+        "type" : "object"
+      },
+      "GuardianInput" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 320,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "phone" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "relationship" : {
+            "maxLength" : 50,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "GuardianView" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "relationship" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "name", "phone", "relationship" ],
+        "type" : "object"
+      },
+      "Header" : {
+        "properties" : {
+          "cycleEnd" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "cycleStart" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "goal" : {
+            "type" : [ "string", "null" ]
+          },
+          "guardian" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/GuardianView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "whatsappPhone" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "fullName", "studentId" ],
+        "type" : "object"
+      },
+      "HistoryView" : {
+        "properties" : {
+          "activeCycle" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/CycleSummary"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "cycles" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Cycle"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "cycles" ],
+        "type" : "object"
+      },
+      "InvitationAccepted" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "email" ],
+        "type" : "object"
+      },
+      "InvitationPreview" : {
+        "properties" : {
+          "audience" : {
+            "enum" : [ "ADULT", "GUARDIAN" ],
+            "type" : "string"
+          },
+          "brandName" : {
+            "type" : "string"
+          },
+          "consents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConsentTextView"
+            },
+            "type" : "array"
+          },
+          "guardianName" : {
+            "type" : [ "string", "null" ]
+          },
+          "primaryColor" : {
+            "type" : [ "string", "null" ]
+          },
+          "studentName" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "audience", "brandName", "consents", "studentName" ],
+        "type" : "object"
+      },
+      "InviteResponse" : {
+        "properties" : {
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "inviteUrl" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "expiresAt", "inviteUrl" ],
+        "type" : "object"
+      },
+      "LoginRequest" : {
+        "properties" : {
+          "email" : {
+            "maxLength" : 320,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "password" : {
+            "maxLength" : 1000,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "password" ],
+        "type" : "object"
+      },
+      "MarkCommand" : {
+        "properties" : {
+          "result" : {
+            "enum" : [ "SCHEDULED", "ATTENDED", "CANCELLED_ON_TIME", "RESCHEDULED", "NO_SHOW", "CANCELLED_BY_COACH" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "result" ],
+        "type" : "object"
+      },
+      "MarkEventCommand" : {
+        "properties" : {
+          "marks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MarkItem"
+            },
+            "minItems" : 1,
+            "type" : "array"
+          }
+        },
+        "required" : [ "marks" ],
+        "type" : "object"
+      },
+      "MarkItem" : {
+        "properties" : {
+          "attendanceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "SCHEDULED", "ATTENDED", "CANCELLED_ON_TIME", "RESCHEDULED", "NO_SHOW", "CANCELLED_BY_COACH" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "attendanceId", "status" ],
+        "type" : "object"
+      },
+      "MeResponse" : {
+        "properties" : {
+          "brandName" : {
+            "type" : "string"
+          },
+          "coachId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "passwordChangedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "passwordChangedBy" : {
+            "enum" : [ "SELF", "COACH_LINK" ],
+            "type" : [ "string", "null" ]
+          },
+          "primaryColor" : {
+            "type" : [ "string", "null" ]
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "userId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "brandName", "coachId", "role", "userId" ],
+        "type" : "object"
+      },
+      "PaymentRegistered" : {
+        "properties" : {
+          "cycleId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "endDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "paymentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "startDate" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "cycleId", "endDate", "paymentId", "startDate" ],
+        "type" : "object"
+      },
+      "PaymentSummary" : {
+        "properties" : {
+          "amountCop" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "cycleId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "method" : {
+            "enum" : [ "NEQUI", "TRANSFER", "CASH" ],
+            "type" : "string"
+          },
+          "paidOn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "recordedBy" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "amountCop", "createdAt", "cycleId", "id", "method", "paidOn", "recordedBy", "studentId" ],
+        "type" : "object"
+      },
+      "PlanInput" : {
+        "properties" : {
+          "classesIncluded" : {
+            "format" : "int32",
+            "maximum" : 200,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "priceCop" : {
+            "format" : "int64",
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "classesIncluded", "modality", "name", "priceCop" ],
+        "type" : "object"
+      },
+      "PlanSummary" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "classesIncluded" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "priceCop" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "active", "classesIncluded", "id", "modality", "name", "priceCop" ],
+        "type" : "object"
+      },
+      "QrView" : {
+        "properties" : {
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "validForSeconds" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "expiresAt", "token", "url", "validForSeconds" ],
+        "type" : "object"
+      },
+      "RegisterCoachRequest" : {
+        "properties" : {
+          "email" : {
+            "format" : "email",
+            "maxLength" : 320,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "name" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "password" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "name" ],
+        "type" : "object"
+      },
+      "RegisterPaymentCommand" : {
+        "properties" : {
+          "amountCop" : {
+            "exclusiveMinimum" : 0,
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "method" : {
+            "enum" : [ "NEQUI", "TRANSFER", "CASH" ],
+            "type" : "string"
+          },
+          "overrideModality" : {
+            "type" : "boolean"
+          },
+          "overrideReason" : {
+            "type" : "string"
+          },
+          "paidOn" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "planId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "amountCop", "method", "planId" ],
+        "type" : "object"
+      },
+      "ResetLinkResponse" : {
+        "properties" : {
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "resetUrl" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "expiresAt", "resetUrl" ],
+        "type" : "object"
+      },
+      "ResetPasswordRequest" : {
+        "properties" : {
+          "newPassword" : {
+            "type" : "string"
+          },
+          "token" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "token" ],
+        "type" : "object"
+      },
+      "SheetView" : {
+        "properties" : {
+          "classes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassRow"
+            },
+            "type" : "array"
+          },
+          "cycle" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/CycleSummary"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "header" : {
+            "$ref" : "#/components/schemas/Header"
+          },
+          "otherEntries" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassRow"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "classes", "header", "otherEntries" ],
+        "type" : "object"
+      },
+      "SlotView" : {
+        "properties" : {
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "localDate" : {
+            "type" : "string"
+          },
+          "localTime" : {
+            "type" : "string"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "endsAt", "localDate", "localTime", "startsAt" ],
+        "type" : "object"
+      },
+      "StudentBillingOverview" : {
+        "properties" : {
+          "classesRemaining" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "endDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "pendingMarks" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "ACTIVE", "EXPIRING_SOON", "NO_CYCLE" ],
+            "type" : "string"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "fullName", "pendingMarks", "status", "studentId" ],
+        "type" : "object"
+      },
+      "StudentCancelCommand" : {
+        "properties" : {
+          "newStartsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "StudentConsentsView" : {
+        "properties" : {
+          "anonymizationRequested" : {
+            "type" : "boolean"
+          },
+          "audience" : {
+            "enum" : [ "ADULT", "GUARDIAN" ],
+            "type" : [ "string", "null" ]
+          },
+          "consents" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConsentItemView"
+            },
+            "type" : "array"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "anonymizationRequested", "consents", "studentId" ],
+        "type" : "object"
+      },
+      "StudentInput" : {
+        "properties" : {
+          "birthDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "email" : {
+            "format" : "email",
+            "maxLength" : 320,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "fullName" : {
+            "maxLength" : 200,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "goal" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "guardian" : {
+            "$ref" : "#/components/schemas/GuardianInput"
+          },
+          "whatsappPhone" : {
+            "maxLength" : 30,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "birthDate", "fullName" ],
+        "type" : "object"
+      },
+      "StudentSlotView" : {
+        "properties" : {
+          "capacity" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "eventId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "localDate" : {
+            "type" : "string"
+          },
+          "localTime" : {
+            "type" : "string"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "occupied" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "capacity", "endsAt", "localDate", "localTime", "modality", "occupied", "startsAt" ],
+        "type" : "object"
+      },
+      "StudentSummary" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "ageAlert" : {
+            "enum" : [ "NONE", "TURNS_ADULT_SOON", "TURNED_ADULT_NEEDS_AUTHORIZATION" ],
+            "type" : [ "string", "null" ]
+          },
+          "anonymizationRequested" : {
+            "type" : "boolean"
+          },
+          "audience" : {
+            "enum" : [ "ADULT", "GUARDIAN" ],
+            "type" : [ "string", "null" ]
+          },
+          "birthDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "daysUntilAdult" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "goal" : {
+            "type" : [ "string", "null" ]
+          },
+          "guardian" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/GuardianView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "hasAccount" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "minor" : {
+            "type" : "boolean"
+          },
+          "turnsAdultOn" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "whatsappPhone" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "active", "anonymizationRequested", "daysUntilAdult", "email", "fullName", "hasAccount", "id", "minor" ],
+        "type" : "object"
+      },
+      "StudentWithInvite" : {
+        "properties" : {
+          "inviteExpiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "inviteUrl" : {
+            "type" : "string"
+          },
+          "student" : {
+            "$ref" : "#/components/schemas/StudentSummary"
+          }
+        },
+        "required" : [ "inviteExpiresAt", "inviteUrl", "student" ],
+        "type" : "object"
+      },
+      "TodayView" : {
+        "properties" : {
+          "date" : {
+            "type" : "string"
+          },
+          "events" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EventView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "date", "events" ],
+        "type" : "object"
+      },
+      "TokenRequest" : {
+        "properties" : {
+          "token" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "token" ],
+        "type" : "object"
+      },
+      "UpdateBrandRequest" : {
+        "properties" : {
+          "brandName" : {
+            "maxLength" : 100,
+            "minLength" : 0,
+            "type" : "string"
+          },
+          "primaryColor" : {
+            "pattern" : "^#[0-9A-Fa-f]{6}$",
+            "type" : "string"
+          }
+        },
+        "required" : [ "brandName", "primaryColor" ],
+        "type" : "object"
+      },
+      "UpdateCoachSettings" : {
+        "properties" : {
+          "cancelWindowHours" : {
+            "format" : "int32",
+            "maximum" : 48,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "classDurationMinutes" : {
+            "format" : "int32",
+            "maximum" : 180,
+            "minimum" : 15,
+            "type" : "integer"
+          },
+          "confirmationWindowHours" : {
+            "format" : "int32",
+            "maximum" : 720,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "defaultGroupCapacity" : {
+            "format" : "int32",
+            "maximum" : 10,
+            "minimum" : 2,
+            "type" : "integer"
+          },
+          "expiringSoonClasses" : {
+            "format" : "int32",
+            "maximum" : 100,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "expiringSoonDays" : {
+            "format" : "int32",
+            "maximum" : 60,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "gymConsentConfirmed" : {
+            "type" : "boolean"
+          },
+          "maxExtensionDays" : {
+            "format" : "int32",
+            "maximum" : 365,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "qrCloseHoursAfterEnd" : {
+            "format" : "int32",
+            "maximum" : 24,
+            "minimum" : 0,
+            "type" : "integer"
+          },
+          "qrOpenMinutesBefore" : {
+            "format" : "int32",
+            "maximum" : 120,
+            "minimum" : 0,
+            "type" : "integer"
+          }
+        },
+        "required" : [ "cancelWindowHours", "classDurationMinutes", "confirmationWindowHours", "defaultGroupCapacity", "expiringSoonClasses", "expiringSoonDays", "gymConsentConfirmed", "maxExtensionDays", "qrCloseHoursAfterEnd", "qrOpenMinutesBefore" ],
+        "type" : "object"
+      },
+      "UpdateStudentRequest" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/StudentInput"
+          }
+        },
+        "required" : [ "data" ],
+        "type" : "object"
+      },
+      "WindowInput" : {
+        "properties" : {
+          "dayOfWeek" : {
+            "format" : "int32",
+            "maximum" : 7,
+            "minimum" : 1,
+            "type" : "integer"
+          },
+          "end" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "start" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "dayOfWeek", "end", "start" ],
+        "type" : "object"
+      },
+      "WindowView" : {
+        "properties" : {
+          "dayOfWeek" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "end" : {
+            "type" : "string"
+          },
+          "start" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "dayOfWeek", "end", "start" ],
+        "type" : "object"
+      }
+    }
+  },
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "openapi" : "3.1.0",
+  "paths" : {
+    "/api/auth/change-password" : {
+      "post" : {
+        "operationId" : "changePassword",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/login" : {
+      "post" : {
+        "operationId" : "login",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/register-coach" : {
+      "post" : {
+        "operationId" : "registerCoach",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterCoachRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AuthResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/auth/reset-password" : {
+      "post" : {
+        "operationId" : "reset",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ResetPasswordRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "password-reset-controller" ]
+      }
+    },
+    "/api/coach/agenda" : {
+      "get" : {
+        "operationId" : "agenda",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgendaView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/attendances/pending" : {
+      "get" : {
+        "operationId" : "pending",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AttendanceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/attendances/{id}/audit" : {
+      "get" : {
+        "operationId" : "audit",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AuditEntryView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "attendance-controller" ]
+      }
+    },
+    "/api/coach/attendances/{id}/cancel" : {
+      "post" : {
+        "operationId" : "cancelAttendance",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CoachCancelCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CancelResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/attendances/{id}/mark" : {
+      "post" : {
+        "operationId" : "mark",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MarkCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AttendanceView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/availability" : {
+      "get" : {
+        "operationId" : "weekly",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/WindowView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      },
+      "put" : {
+        "operationId" : "replaceWeekly",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/WindowInput"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/WindowView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/availability/blocks" : {
+      "get" : {
+        "operationId" : "blocks",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/BlockSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      },
+      "post" : {
+        "operationId" : "createBlock",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlockInput"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlockCreated"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/availability/blocks/{id}" : {
+      "delete" : {
+        "operationId" : "deleteBlock",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/billing/overview" : {
+      "get" : {
+        "operationId" : "overview",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/StudentBillingOverview"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/brand" : {
+      "get" : {
+        "operationId" : "get_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrandView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "coach-brand-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_2",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateBrandRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BrandView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "coach-brand-controller" ]
+      }
+    },
+    "/api/coach/cycles/{cycleId}/extend" : {
+      "post" : {
+        "operationId" : "extend",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "cycleId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExtendCycleCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CycleSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/events/{id}/cancel" : {
+      "post" : {
+        "operationId" : "cancelEvent",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CancelEventCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EventCancelResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/events/{id}/capacity" : {
+      "put" : {
+        "operationId" : "changeCapacity",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeCapacityCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EventView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/events/{id}/mark" : {
+      "post" : {
+        "operationId" : "markEvent",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MarkEventCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AttendanceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/events/{id}/qr" : {
+      "get" : {
+        "operationId" : "qr",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QrView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "attendance-controller" ]
+      }
+    },
+    "/api/coach/payments" : {
+      "get" : {
+        "operationId" : "payments",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "studentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PaymentSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/plans" : {
+      "get" : {
+        "operationId" : "listPlans",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/PlanSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      },
+      "post" : {
+        "operationId" : "createPlan",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlanInput"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanSummary"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/plans/{id}" : {
+      "put" : {
+        "operationId" : "updatePlan",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlanInput"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/plans/{id}/active" : {
+      "patch" : {
+        "operationId" : "setPlanActive",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ActiveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/settings" : {
+      "get" : {
+        "operationId" : "get_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoachSettingsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "coach-settings-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateCoachSettings"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoachSettingsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "coach-settings-controller" ]
+      }
+    },
+    "/api/coach/students" : {
+      "get" : {
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/StudentSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-controller" ]
+      },
+      "post" : {
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StudentInput"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentWithInvite"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "student-controller" ]
+      }
+    },
+    "/api/coach/students/{id}" : {
+      "get" : {
+        "operationId" : "get",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-controller" ]
+      },
+      "put" : {
+        "operationId" : "update",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateStudentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-controller" ]
+      }
+    },
+    "/api/coach/students/{id}/consents" : {
+      "get" : {
+        "operationId" : "coachView",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentConsentsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "consent-controller" ]
+      }
+    },
+    "/api/coach/students/{id}/consents/{type}/accept" : {
+      "post" : {
+        "operationId" : "coachAccept",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "type",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "DATA_ADULT", "DATA_GUARDIAN", "WHATSAPP" ],
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AcceptConsentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentConsentsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "consent-controller" ]
+      }
+    },
+    "/api/coach/students/{id}/consents/{type}/revoke" : {
+      "post" : {
+        "operationId" : "coachRevoke",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "type",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "DATA_ADULT", "DATA_GUARDIAN", "WHATSAPP" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentConsentsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "consent-controller" ]
+      }
+    },
+    "/api/coach/students/{id}/invitations" : {
+      "post" : {
+        "operationId" : "reissue",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InviteResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "student-controller" ]
+      }
+    },
+    "/api/coach/students/{id}/password-reset" : {
+      "delete" : {
+        "operationId" : "revokeReset",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "tags" : [ "student-controller" ]
+      },
+      "post" : {
+        "operationId" : "issueReset",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ResetLinkResponse"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "student-controller" ]
+      }
+    },
+    "/api/coach/students/{id}/sheet" : {
+      "get" : {
+        "operationId" : "sheet",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "cycleId",
+          "required" : false,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SheetView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "attendance-controller" ]
+      }
+    },
+    "/api/coach/students/{studentId}/cycles" : {
+      "get" : {
+        "operationId" : "cycles",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "studentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CycleSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/students/{studentId}/cycles/active" : {
+      "get" : {
+        "operationId" : "activeCycle",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "studentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CycleSummary"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/students/{studentId}/payments" : {
+      "post" : {
+        "operationId" : "registerPayment",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "studentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterPaymentCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PaymentRegistered"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/students/{studentId}/sessions" : {
+      "get" : {
+        "operationId" : "attendancesOfStudent",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "studentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AttendanceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      },
+      "post" : {
+        "operationId" : "book_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "studentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CoachBookCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AttendanceView"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/today" : {
+      "get" : {
+        "operationId" : "today",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TodayView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "attendance-controller" ]
+      }
+    },
+    "/api/invitations/accept" : {
+      "post" : {
+        "operationId" : "accept_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AcceptRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationAccepted"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "invitation-controller" ]
+      }
+    },
+    "/api/invitations/preview" : {
+      "post" : {
+        "operationId" : "preview",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TokenRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvitationPreview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "invitation-controller" ]
+      }
+    },
+    "/api/me" : {
+      "get" : {
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "auth-controller" ]
+      }
+    },
+    "/api/student/attendances/confirm-qr" : {
+      "post" : {
+        "operationId" : "confirmQr",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConfirmQrRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfirmQrResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "attendance-controller" ]
+      }
+    },
+    "/api/student/attendances/{id}/confirm" : {
+      "post" : {
+        "operationId" : "confirm",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfirmResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "attendance-controller" ]
+      }
+    },
+    "/api/student/consents" : {
+      "get" : {
+        "operationId" : "mine",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentConsentsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "consent-controller" ]
+      }
+    },
+    "/api/student/consents/{type}/accept" : {
+      "post" : {
+        "operationId" : "accept",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "type",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "DATA_ADULT", "DATA_GUARDIAN", "WHATSAPP" ],
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AcceptConsentRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentConsentsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "consent-controller" ]
+      }
+    },
+    "/api/student/consents/{type}/revoke" : {
+      "post" : {
+        "operationId" : "revoke",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "type",
+          "required" : true,
+          "schema" : {
+            "enum" : [ "DATA_ADULT", "DATA_GUARDIAN", "WHATSAPP" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentConsentsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "consent-controller" ]
+      }
+    },
+    "/api/student/history" : {
+      "get" : {
+        "operationId" : "history",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HistoryView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "attendance-controller" ]
+      }
+    },
+    "/api/student/sessions" : {
+      "get" : {
+        "operationId" : "mySessions",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AttendanceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-scheduling-controller" ]
+      },
+      "post" : {
+        "operationId" : "book",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BookCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AttendanceView"
+                }
+              }
+            },
+            "description" : "Created"
+          }
+        },
+        "tags" : [ "student-scheduling-controller" ]
+      }
+    },
+    "/api/student/sessions/{id}/cancel" : {
+      "post" : {
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StudentCancelCommand"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CancelResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-scheduling-controller" ]
+      }
+    },
+    "/api/student/slots" : {
+      "get" : {
+        "operationId" : "slots",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "from",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "to",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/StudentSlotView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "student-scheduling-controller" ]
+      }
+    }
+  }
+}

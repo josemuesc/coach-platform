@@ -67,7 +67,8 @@ public class InvitationService {
             Map<String, String> values = Map.of("NOMBRE_DEL_MENOR", student.getFullName(),
                     "CELULAR", phone == null ? "el numero de contacto registrado" : phone);
             List<ConsentTextView> texts = ConsentRules.offeredFor(audience).stream().map(t -> catalog.view(t, values)).toList();
-            return new InvitationPreview(coaches.brandName(coachId), student.getFullName(), audience,
+            var brand = coaches.brand(coachId);
+            return new InvitationPreview(brand.brandName(), brand.primaryColor(), student.getFullName(), audience,
                     audience == Audience.GUARDIAN ? student.guardian().name() : null, texts);
         }));
     }

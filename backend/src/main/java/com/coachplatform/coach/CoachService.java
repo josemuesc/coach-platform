@@ -1,6 +1,7 @@
 package com.coachplatform.coach;
 
 import com.coachplatform.coach.api.BillingSettings;
+import com.coachplatform.coach.api.BrandView;
 import com.coachplatform.coach.api.CoachSettingsView;
 import com.coachplatform.coach.api.SchedulingSettings;
 import com.coachplatform.coach.api.UpdateCoachSettings;
@@ -35,8 +36,17 @@ public class CoachService {
     }
 
     @Transactional(readOnly = true)
-    public String brandName(UUID coachId) {
-        return coaches.findById(coachId).map(Coach::getBrandName).orElseThrow();
+    public BrandView brand(UUID coachId) {
+        Coach c = coaches.findById(coachId).orElseThrow();
+        return new BrandView(c.getBrandName(), c.getPrimaryColor());
+    }
+
+    /** The color is stored upper case so the same color is always the same string. */
+    @Transactional
+    public BrandView updateBrand(UUID coachId, String brandName, String primaryColor) {
+        Coach c = coaches.findById(coachId).orElseThrow();
+        c.updateBrand(brandName, primaryColor.toUpperCase(java.util.Locale.ROOT));
+        return new BrandView(c.getBrandName(), c.getPrimaryColor());
     }
 
     @Transactional(readOnly = true)
