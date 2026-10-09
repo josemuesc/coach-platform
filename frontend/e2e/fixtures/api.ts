@@ -74,3 +74,34 @@ export async function issueResetLink(request: APIRequestContext, coach: Coach, s
   const url = ((await res.json()) as { resetUrl: string }).resetUrl;
   return url.slice(url.lastIndexOf('/') + 1);
 }
+
+/** An adult with a given login email (to build the "that email already has an account" cases). */
+export async function createAdult(request: APIRequestContext, coach: Coach, name: string, email: string): Promise<Student> {
+  const res = await request.post(`${API}/api/coach/students`, {
+    headers: bearer(coach.token),
+    data: { fullName: name, email, whatsappPhone: '3001234567', birthDate: '1990-05-01' },
+  });
+  expect(res.status()).toBe(201);
+  const body = (await res.json()) as { student: { id: string }; inviteUrl: string };
+  return { id: body.student.id, email, inviteToken: body.inviteUrl.slice(body.inviteUrl.lastIndexOf('/') + 1) };
+}
+
+/** A 16-year-old: the guardian's email is the login of the account. Invented data only. */
+export async function createMinor(request: APIRequestContext, coach: Coach, name: string, guardianEmail: string, guardianName = 'Marta Pérez'): Promise<Student> {
+  const res = await request.post(`${API}/api/coach/students`, {
+    headers: bearer(coach.token),
+    data: {
+      fullName: name,
+      birthDate: new Date(Date.now() - 16 * 365.25 * 24 * 3600 * 1000).toISOString().slice(0, 10),
+      guardian: { name: guardianName, relationship: 'madre', phone: '3009998877', email: guardianEmail },
+    },
+  });
+  expect(res.status()).toBe(201);
+  const body = (await res.json()) as { student: { id: string }; inviteUrl: string };
+  return { id: body.student.id, email: guardianEmail, inviteToken: body.inviteUrl.slice(body.inviteUrl.lastIndexOf('/') + 1) };
+}
+
+/** The preview straight from the API: proves an invitation is still usable (or not) without going through the page. */
+export async function previewStatus(request: APIRequestContext, token: string): Promise<number> {
+  return (await request.post(`${API}/api/invitations/preview`, { data: { token } })).status();
+}

@@ -1019,6 +1019,7 @@ export interface components {
         };
         ConsentTextView: {
             bodyMarkdown: string;
+            draft: boolean;
             required: boolean;
             title: string;
             /** @enum {string} */
@@ -1122,6 +1123,7 @@ export interface components {
             email: string;
         };
         InvitationPreview: {
+            accountEmail: string;
             /** @enum {string} */
             audience: "ADULT" | "GUARDIAN";
             brandName: string;

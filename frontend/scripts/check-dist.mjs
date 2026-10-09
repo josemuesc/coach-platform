@@ -16,6 +16,7 @@ const ALLOWED = [
   /^https:\/\/reactrouter\.com\//,
   /^https:\/\/react\.dev\//,
   /^https:\/\/github\.com\/ungap\//,
+  /^https:\/\/github\.com\/syntax-tree\/hast-util-to-jsx-runtime$/,   // react-markdown: the link inside one of its error messages
   /^https:\/\/bit\.ly\/wb-precache/,
   /^http:\/\/localhost/,
   /^http:\/\/placeholder/,

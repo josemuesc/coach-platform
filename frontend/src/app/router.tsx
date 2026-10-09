@@ -16,6 +16,9 @@ const smokeRoutes: RouteObject[] =
 
 export const routes: RouteObject[] = [
   { path: '/', element: <RootRedirect /> },
+  // the invitation draws its own header: it wears the coach's brand, not the generic one
+  { path: '/invite/:token', lazy: () => import('../features/invite/InvitePage').then((m) => ({ Component: m.InvitePage })) },
+  { path: '/invite', lazy: () => import('../features/invite/InvitePage').then((m) => ({ Component: m.InvitePage })) },
   {
     element: <PublicLayout />,
     children: [

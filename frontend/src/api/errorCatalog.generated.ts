@@ -36,7 +36,7 @@ export const ERRORS = {
   EVENT_NOT_FOUND: { status: 404, message: "No se encontró la clase." },
   EXTENSION_LIMIT_EXCEEDED: { status: 422, message: "Se superó el máximo de días de extensión permitido." },
   GUARDIAN_CONSENT_NOT_ALLOWED: { status: 403, message: "La autorización del representante no se puede registrar desde una sesión de alumno." },
-  GUARDIAN_EMAIL_IN_USE: { status: 409, message: "Ese correo es del representante y ya tiene un alumno con este entrenador. Un correo corresponde a una sola cuenta. (Aplica a un alumno menor, al crearlo, al cambiar el correo del representante o al aceptar la invitación si el representante ya tiene cuenta con otro entrenador. La respuesta lleva este texto en `details.message`.)" },
+  GUARDIAN_EMAIL_IN_USE: { status: 409, message: "Este correo ya tiene una cuenta. Pide a tu entrenador que registre un correo distinto para cada alumno. (Aplica a un alumno menor, al crearlo, al cambiar el correo del representante o al aceptar la invitación si el representante ya tiene cuenta con otro entrenador. La respuesta lleva este texto en `details.message`.)" },
   GUARDIAN_INCOMPLETE: { status: 422, message: "Los datos del representante van completos o ninguno: nombre, parentesco, celular y correo." },
   GUARDIAN_REQUIRED: { status: 422, message: "Un alumno menor de 18 años necesita los datos del representante: nombre, parentesco, celular y correo." },
   INVALID_AVAILABILITY: { status: 422, message: "La disponibilidad enviada no es válida." },
