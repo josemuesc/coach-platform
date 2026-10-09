@@ -14,6 +14,7 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `INVALID_CREDENTIALS` | 401 | Correo o contraseña incorrectos. |
 | `TOO_MANY_ATTEMPTS` | 429 | Demasiados intentos. Espera unos minutos e inténtalo de nuevo. |
 | `INVALID_INVITATION` | 400 | La invitación no es válida o ya venció. Pide al entrenador un enlace nuevo. |
+| `REGISTRATION_CLOSED` | 403 | El registro de entrenadores está cerrado. |
 | `INVALID_RESET_LINK` | 400 | El enlace para cambiar la contraseña no es válido, ya se usó o venció. Pide al entrenador uno nuevo. (Misma respuesta en cualquiera de esos casos.) |
 | `INVALID_SESSION` | 401 | Tu sesión terminó porque la contraseña cambió. Inicia sesión de nuevo. |
 | `EMAIL_ALREADY_USED` | 409 | Ese correo ya tiene una cuenta en la plataforma. (Para un alumno menor se usa `GUARDIAN_EMAIL_IN_USE`.) |

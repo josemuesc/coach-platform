@@ -34,6 +34,7 @@ public class SecurityConfig {
     public static final String INVITATION_PREVIEW_PATH = "/api/invitations/preview";
     public static final String INVITATION_ACCEPT_PATH = "/api/invitations/accept";
     public static final String RESET_PASSWORD_PATH = "/api/auth/reset-password";
+    public static final String REGISTER_COACH_PATH = "/api/auth/register-coach";
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter, RateLimitFilter rateLimitFilter,
@@ -47,7 +48,7 @@ public class SecurityConfig {
                         // The container re-dispatches sendError() responses (403, 400, 404...) to /error WITHOUT the JWT; without
                         // this they would all be turned into a misleading 401. A direct call to /error still needs a token.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers("/api/auth/register-coach", LOGIN_PATH,
+                        .requestMatchers(REGISTER_COACH_PATH, LOGIN_PATH,
                                 INVITATION_PREVIEW_PATH, INVITATION_ACCEPT_PATH, RESET_PASSWORD_PATH).permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         // Open to the filter chain on purpose: springdoc registers these paths only with app.openapi.enabled=true,
@@ -138,6 +139,15 @@ public class SecurityConfig {
         return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
     }
 
+    /** Refused or failed registrations per IP (closed registration answers 403 every time, so a script hammering it is cut off too). */
+    @Bean
+    @Qualifier("registerIpLimiter")
+    AttemptLimiter registerIpLimiter(Clock clock,
+                                     @Value("${app.security.register-ip.max-failures:10}") int max,
+                                     @Value("${app.security.window-minutes:15}") long windowMinutes) {
+        return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
+    }
+
     @Bean
     @Qualifier("resetPasswordIpLimiter")
     AttemptLimiter resetPasswordIpLimiter(Clock clock,
@@ -158,13 +168,15 @@ public class SecurityConfig {
     RateLimitFilter rateLimitFilter(@Qualifier("loginIpLimiter") AttemptLimiter loginIp,
                                     @Qualifier("invitationIpLimiter") AttemptLimiter invitationIp,
                                     @Qualifier("qrScanIpLimiter") AttemptLimiter qrScanIp,
-                                    @Qualifier("resetPasswordIpLimiter") AttemptLimiter resetPasswordIp) {
+                                    @Qualifier("resetPasswordIpLimiter") AttemptLimiter resetPasswordIp,
+                                    @Qualifier("registerIpLimiter") AttemptLimiter registerIp) {
         return new RateLimitFilter(Map.of(
                 LOGIN_PATH, loginIp,
                 INVITATION_PREVIEW_PATH, invitationIp,
                 INVITATION_ACCEPT_PATH, invitationIp,
                 CONFIRM_QR_PATH, qrScanIp,
-                RESET_PASSWORD_PATH, resetPasswordIp));
+                RESET_PASSWORD_PATH, resetPasswordIp,
+                REGISTER_COACH_PATH, registerIp));
     }
 
     /** The filters belong to the security chain only; stop Spring Boot from also registering them in the servlet container. */

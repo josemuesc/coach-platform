@@ -10,6 +10,8 @@ spring:
     enabled: false
 
 app:
+  registration:
+    open: true
   qr:
     secret: test-qr-secret-test-qr-secret-test-qr-32b
   jwt:
