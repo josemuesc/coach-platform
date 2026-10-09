@@ -50,13 +50,13 @@ class ResourceIsolationPostgresIT extends PostgresIntegrationTest {
 
         UUID planA = TenantContext.callAs(coachA, () -> plans.create(new PlanInput("8 clases", 8, 520_000L, com.coachplatform.billing.api.Modality.PERSONALIZED)).id());
         UUID studentA = TenantContext.callAs(coachA,
-                () -> students.create(new StudentInput("Alumno A", "a-" + UUID.randomUUID() + "@test.co", null), userA).student().id());
+                () -> students.create(new StudentInput("Alumno A", "a-" + UUID.randomUUID() + "@test.co", null, java.time.LocalDate.of(1990, 5, 1), null, null), userA).student().id());
         PaymentRegistered paid = TenantContext.callAs(coachA, () -> billing.registerPayment(studentA,
                 new RegisterPaymentCommand(planA, 520_000L, PaymentMethod.CASH, null), userA));
 
         UUID planB = TenantContext.callAs(coachB, () -> plans.create(new PlanInput("8 clases", 8, 520_000L, com.coachplatform.billing.api.Modality.PERSONALIZED)).id());
         UUID studentB = TenantContext.callAs(coachB,
-                () -> students.create(new StudentInput("Alumno B", "b-" + UUID.randomUUID() + "@test.co", null), userB).student().id());
+                () -> students.create(new StudentInput("Alumno B", "b-" + UUID.randomUUID() + "@test.co", null, java.time.LocalDate.of(1990, 5, 1), null, null), userB).student().id());
 
         TenantContext.runAs(coachB, () -> {
             // plans

@@ -72,7 +72,13 @@ public class CoachSettings {
     public Instant getGymConsentConfirmedAt() { return gymConsentConfirmedAt; }
 
     public void update(int cancelWindowHours, int classDurationMinutes, int expiringSoonDays, int expiringSoonClasses,
-                       int maxExtensionDays, int defaultGroupCapacity) {
+                       int maxExtensionDays, int defaultGroupCapacity, int confirmationWindowHours, int qrOpenMinutesBefore,
+                       int qrCloseHoursAfterEnd, boolean gymConsentConfirmed, Instant gymConsentConfirmedAt) {
+        this.confirmationWindowHours = confirmationWindowHours;
+        this.qrOpenMinutesBefore = qrOpenMinutesBefore;
+        this.qrCloseHoursAfterEnd = qrCloseHoursAfterEnd;
+        this.gymConsentConfirmed = gymConsentConfirmed;
+        this.gymConsentConfirmedAt = gymConsentConfirmedAt;
         this.defaultGroupCapacity = defaultGroupCapacity;
         this.cancelWindowHours = cancelWindowHours;
         this.classDurationMinutes = classDurationMinutes;

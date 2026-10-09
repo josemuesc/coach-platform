@@ -76,6 +76,12 @@ public class AuthService {
         return users.save(new AppUser(coachId, normalized, encoder.encode(rawPassword), UserRole.STUDENT)).getId();
     }
 
+    /** Suspends a login (it can no longer sign in). Used when a data consent is revoked. Idempotent. */
+    @Transactional
+    public void deactivateAccount(UUID userId) {
+        users.findById(userId).ifPresent(AppUser::deactivate);
+    }
+
     @Transactional
     public AuthResponse changePassword(UUID userId, ChangePasswordRequest req) {
         AppUser user = users.findById(userId).orElseThrow(() -> new BadCredentialsException("Invalid credentials"));

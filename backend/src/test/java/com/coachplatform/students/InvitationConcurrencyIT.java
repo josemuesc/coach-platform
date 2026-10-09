@@ -38,7 +38,7 @@ class InvitationConcurrencyIT extends PostgresIntegrationTest {
             UUID coachUser = users.findByEmailIgnoreCase(coachEmail).orElseThrow().getId();
             String studentEmail = "alumno-" + UUID.randomUUID() + "@test.co";
             String token = TenantContext.callAs(coachId,
-                    () -> students.create(new StudentInput("Ana", studentEmail, null), coachUser).invitation().token());
+                    () -> students.create(new StudentInput("Ana", studentEmail, null, java.time.LocalDate.of(1990, 5, 1), null, null), coachUser).invitation().token());
 
             ExecutorService pool = Executors.newFixedThreadPool(2);
             CountDownLatch ready = new CountDownLatch(2);
@@ -49,7 +49,7 @@ class InvitationConcurrencyIT extends PostgresIntegrationTest {
                     ready.countDown();
                     go.await();
                     try {
-                        return invitations.accept(token, password);
+                        return invitations.accept(token, password, true, com.coachplatform.support.ConsentFixtures.version("DATA_ADULT"), false, null);
                     } catch (Throwable t) {
                         return t;
                     }

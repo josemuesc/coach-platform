@@ -112,6 +112,21 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The authorization texts live in docs/consent (versioned, reviewed by the lawyer) and are packaged on the classpath. -->
+            <resource>
+                <directory>${project.basedir}/../docs/consent</directory>
+                <targetPath>consent</targetPath>
+                <includes>
+                    <include>DATA_ADULT.md</include>
+                    <include>DATA_GUARDIAN.md</include>
+                    <include>WHATSAPP.md</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

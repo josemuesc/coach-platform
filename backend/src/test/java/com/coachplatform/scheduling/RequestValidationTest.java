@@ -106,14 +106,31 @@ class RequestValidationTest extends SchedulingApiTest {
     // ================================================================= students
 
     @Test
-    void aStudentWithoutEmailOrNameIsRejected() throws Exception {
+    void aStudentWithoutNameBirthDateOrAValidEmailIsRejected() throws Exception {
         var coach = newCoach(8);
-        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Sin Email\"}").andExpect(status().isBadRequest());
-        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Sin Email\",\"email\":null}").andExpect(status().isBadRequest());
-        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Sin Email\",\"email\":\"  \"}").andExpect(status().isBadRequest());
-        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Mal Email\",\"email\":\"no-es-un-email\"}").andExpect(status().isBadRequest());
-        postJson("/api/coach/students", coach.token(), "{\"email\":\"sin.nombre@test.co\"}").andExpect(status().isBadRequest());
-        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Ok\",\"email\":\"ok@test.co\"}").andExpect(status().isCreated());
+        String born = ",\"birthDate\":\"1990-05-01\"";
+        postJson("/api/coach/students", coach.token(), "{\"email\":\"sin.nombre@test.co\"" + born + "}").andExpect(status().isBadRequest());   // no name
+        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Sin Fecha\",\"email\":\"sf@test.co\"}").andExpect(status().isBadRequest());   // birth date is mandatory
+        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Sin Fecha\",\"email\":\"sf@test.co\",\"birthDate\":null}").andExpect(status().isBadRequest());
+        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Mal Email\",\"email\":\"no-es-un-email\"" + born + "}").andExpect(status().isBadRequest());
+        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Ok\",\"email\":\"ok@test.co\"" + born + "}").andExpect(status().isCreated());
+    }
+
+    @Test
+    void anAdultStudentNeedsAnEmailButAMinorTakesTheGuardiansInstead() throws Exception {
+        var coach = newCoach(8);
+        String born = ",\"birthDate\":\"1990-05-01\"";
+        // an adult without email: a business rule (422 EMAIL_REQUIRED), not a malformed body
+        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Sin Email\"" + born + "}").andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.code").value("EMAIL_REQUIRED"));
+        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Sin Email\",\"email\":null" + born + "}")
+                .andExpect(status().isUnprocessableEntity());
+        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Sin Email\",\"email\":\"  \"" + born + "}")
+                .andExpect(status().isBadRequest());   // whitespace is not a valid email address
+        // a minor needs no email of their own: the guardian's is the login
+        postJson("/api/coach/students", coach.token(), "{\"fullName\":\"Menor\",\"birthDate\":\"2010-05-01\",\"guardian\":{\"name\":\"Marta\","
+                + "\"relationship\":\"madre\",\"phone\":\"3001234567\",\"email\":\"MARTA@test.co\"}}")
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.student.email").value("marta@test.co"));
     }
 
     @Test
@@ -122,8 +139,9 @@ class RequestValidationTest extends SchedulingApiTest {
         var ana = newStudent(coach, "Ana");
         putJson("/api/coach/students/" + ana.id(), coach.token(), "{}").andExpect(status().isBadRequest());
         putJson("/api/coach/students/" + ana.id(), coach.token(), "{\"active\":false}").andExpect(status().isBadRequest());
-        putJson("/api/coach/students/" + ana.id(), coach.token(), "{\"data\":{\"fullName\":\"Sin email\"}}").andExpect(status().isBadRequest());
-        putJson("/api/coach/students/" + ana.id(), coach.token(), "{\"data\":{\"fullName\":\"Ana R\",\"email\":\"" + ana.email() + "\"}}").andExpect(status().isOk());
+        putJson("/api/coach/students/" + ana.id(), coach.token(), "{\"data\":{\"fullName\":\"Sin fecha\",\"email\":\"" + ana.email() + "\"}}").andExpect(status().isBadRequest());
+        putJson("/api/coach/students/" + ana.id(), coach.token(), "{\"data\":{\"email\":\"" + ana.email() + "\",\"birthDate\":\"1990-05-01\"}}").andExpect(status().isBadRequest());
+        putJson("/api/coach/students/" + ana.id(), coach.token(), "{\"data\":{\"fullName\":\"Ana R\",\"email\":\"" + ana.email() + "\",\"birthDate\":\"1990-05-01\"}}").andExpect(status().isOk());
     }
 
     // ================================================================= settings: a PUT replaces everything, so every field is required
@@ -132,9 +150,11 @@ class RequestValidationTest extends SchedulingApiTest {
     void theSettingsRequireEveryField() throws Exception {
         var coach = newCoach(8);
         List<String> fields = List.of("cancelWindowHours", "classDurationMinutes", "expiringSoonDays", "expiringSoonClasses",
-                "maxExtensionDays", "defaultGroupCapacity");
-        java.util.Map<String, Integer> valid = java.util.Map.of("cancelWindowHours", 2, "classDurationMinutes", 60, "expiringSoonDays", 5,
-                "expiringSoonClasses", 1, "maxExtensionDays", 60, "defaultGroupCapacity", 4);
+                "maxExtensionDays", "defaultGroupCapacity", "confirmationWindowHours", "qrOpenMinutesBefore", "qrCloseHoursAfterEnd",
+                "gymConsentConfirmed");
+        java.util.Map<String, Object> valid = java.util.Map.of("cancelWindowHours", 2, "classDurationMinutes", 60, "expiringSoonDays", 5,
+                "expiringSoonClasses", 1, "maxExtensionDays", 60, "defaultGroupCapacity", 4, "confirmationWindowHours", 72,
+                "qrOpenMinutesBefore", 15, "qrCloseHoursAfterEnd", 2, "gymConsentConfirmed", false);
         for (String missing : fields) {
             StringBuilder body = new StringBuilder("{");
             for (String f : fields) {

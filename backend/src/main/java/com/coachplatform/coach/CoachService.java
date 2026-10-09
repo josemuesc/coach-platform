@@ -4,6 +4,8 @@ import com.coachplatform.coach.api.BillingSettings;
 import com.coachplatform.coach.api.CoachSettingsView;
 import com.coachplatform.coach.api.SchedulingSettings;
 import com.coachplatform.coach.api.UpdateCoachSettings;
+import com.coachplatform.coach.domain.GymConsentRules;
+import java.time.Clock;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -15,10 +17,13 @@ public class CoachService {
 
     private final CoachRepository coaches;
     private final CoachSettingsRepository settings;
+    private final Clock clock;
+    private final GymConsentRules gymConsent = new GymConsentRules();
 
-    public CoachService(CoachRepository coaches, CoachSettingsRepository settings) {
+    public CoachService(CoachRepository coaches, CoachSettingsRepository settings, Clock clock) {
         this.coaches = coaches;
         this.settings = settings;
+        this.clock = clock;
     }
 
     /** Creates a coach (tenant) with default settings and returns its id. */
@@ -54,14 +59,18 @@ public class CoachService {
     @Transactional
     public CoachSettingsView updateSettings(UUID coachId, UpdateCoachSettings cmd) {
         CoachSettings s = settings.findById(coachId).orElseThrow();
+        var gym = gymConsent.apply(new GymConsentRules.State(s.isGymConsentConfirmed(), s.getGymConsentConfirmedAt()),
+                cmd.gymConsentConfirmed(), clock.instant());
         s.update(cmd.cancelWindowHours(), cmd.classDurationMinutes(), cmd.expiringSoonDays(), cmd.expiringSoonClasses(),
-                cmd.maxExtensionDays(), cmd.defaultGroupCapacity());
+                cmd.maxExtensionDays(), cmd.defaultGroupCapacity(), cmd.confirmationWindowHours(), cmd.qrOpenMinutesBefore(),
+                cmd.qrCloseHoursAfterEnd(), gym.confirmed(), gym.confirmedAt());
         return view(s);
     }
 
     private static CoachSettingsView view(CoachSettings s) {
         return new CoachSettingsView(s.getCancelWindowHours(), s.getClassDurationMinutes(), s.getExpiringSoonDays(),
-                s.getExpiringSoonClasses(), s.getMaxExtensionDays(), s.getDefaultGroupCapacity());
+                s.getExpiringSoonClasses(), s.getMaxExtensionDays(), s.getDefaultGroupCapacity(), s.getConfirmationWindowHours(),
+                s.getQrOpenMinutesBefore(), s.getQrCloseHoursAfterEnd(), s.isGymConsentConfirmed(), s.getGymConsentConfirmedAt());
     }
 
     /**

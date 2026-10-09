@@ -69,6 +69,7 @@ class ConsentRecord extends TenantScopedEntity {
 
     UUID getId() { return id; }
     UUID getStudentId() { return studentId; }
+    UUID getAcceptedByUserId() { return acceptedByUserId; }
     ConsentType getType() { return type; }
     String getVersion() { return version; }
     String getTextSha256() { return textSha256; }

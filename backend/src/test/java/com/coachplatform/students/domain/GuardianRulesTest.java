@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.coachplatform.students.api.Audience;
 import com.coachplatform.students.api.ConsentType;
-import com.coachplatform.students.domain.GuardianRules.AgeAlert;
+import com.coachplatform.students.api.AgeAlert;
 import com.coachplatform.students.domain.GuardianRules.AgeStatus;
 import com.coachplatform.students.domain.StudentRuleException.Code;
 import java.time.Clock;

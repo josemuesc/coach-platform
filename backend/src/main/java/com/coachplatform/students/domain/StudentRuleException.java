@@ -12,7 +12,10 @@ public class StudentRuleException extends RuntimeException {
         CONSENT_VERSION_MISMATCH,
         GUARDIAN_CONSENT_NOT_ALLOWED,
         CONSENT_ALREADY_ACTIVE,
-        CONSENT_NOT_ACTIVE
+        CONSENT_NOT_ACTIVE,
+        ADULT_CONSENT_NOT_ALLOWED,
+        CONSENT_NOT_APPLICABLE,
+        ANONYMIZATION_PENDING
     }
 
     private final Code code;

@@ -76,7 +76,7 @@ class SchedulingConcurrencyIT extends PostgresIntegrationTest {
 
     private UUID student(Coach c, boolean semi) {
         return TenantContext.callAs(c.coachId(), () -> {
-            UUID id = students.create(new StudentInput("Alumno", "a-" + UUID.randomUUID() + "@test.co", null), c.userId()).student().id();
+            UUID id = students.create(new StudentInput("Alumno", "a-" + UUID.randomUUID() + "@test.co", null, java.time.LocalDate.of(1990, 5, 1), null, null), c.userId()).student().id();
             billing.registerPayment(id, new RegisterPaymentCommand(semi ? c.semiPlan() : c.personalizedPlan(), 520_000L, PaymentMethod.CASH, null), c.userId());
             return id;
         });

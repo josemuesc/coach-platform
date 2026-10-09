@@ -19,6 +19,10 @@ interface StudentRepository extends JpaRepository<Student, UUID> {
 
     List<Student> findAllByOrderByFullNameAsc();
 
+    /** Projection only (no entity is loaded), so a following SELECT ... FOR UPDATE reads fresh state. */
+    @Query("select s.id from Student s where s.userId = :userId")
+    Optional<UUID> findIdByUserId(@Param("userId") UUID userId);
+
     /** SELECT ... FOR UPDATE, tenant-filtered like every other query. Serializes work on one student. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from Student s where s.id = :id")

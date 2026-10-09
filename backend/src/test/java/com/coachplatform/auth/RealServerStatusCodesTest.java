@@ -47,12 +47,12 @@ class RealServerStatusCodesTest {
     private String studentToken(String coachToken) throws Exception {
         String email = "alumno-" + UUID.randomUUID() + "@test.co";
         var created = send("POST", "/api/coach/students",
-                "{\"fullName\":\"Ana\",\"email\":\"" + email + "\"}", coachToken);
+                "{\"fullName\":\"Ana\",\"email\":\"" + email + "\",\"birthDate\":\"1990-05-01\"}", coachToken);
         assertThat(created.statusCode()).isEqualTo(201);
         String inviteUrl = JsonPath.read(created.body(), "$.inviteUrl");
         String token = inviteUrl.substring(inviteUrl.lastIndexOf('/') + 1);
         assertThat(send("POST", "/api/invitations/accept",
-                "{\"token\":\"" + token + "\",\"password\":\"" + PASSWORD + "\"}", null).statusCode()).isEqualTo(200);
+                com.coachplatform.support.ConsentFixtures.acceptJson(token, PASSWORD), null).statusCode()).isEqualTo(200);
         var login = send("POST", "/api/auth/login", "{\"email\":\"" + email + "\",\"password\":\"" + PASSWORD + "\"}", null);
         return JsonPath.read(login.body(), "$.token");
     }

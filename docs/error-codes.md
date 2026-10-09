@@ -5,7 +5,7 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 
 > Estado: documento inicial (Fase 3.5). Antes de cerrar el contrato con el frontend se añadirá una prueba que compare esta tabla con
 > todos los códigos del código fuente (enums `*RuleException.Code`, `ApiException` y los manejadores) y falle si falta o sobra alguno.
-> Los códigos marcados con † existen en el dominio y están probados, pero su HTTP definitivo se cablea con los servicios (Fase 3.5).
+> Los códigos marcados con existen en el dominio y están probados, pero su HTTP definitivo se cablea con los servicios (Fase 3.5).
 
 ## Generales y de acceso
 | Código | HTTP | Mensaje en español |
@@ -26,6 +26,8 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `STUDENT_EMAIL_EXISTS` | 409 | Ya tienes un alumno con ese correo. |
 | `EMAIL_LOCKED` | 409 | El correo no se puede cambiar porque el alumno ya aceptó la invitación. |
 | `STUDENT_ALREADY_HAS_ACCOUNT` | 409 | El alumno ya tiene su cuenta creada. |
+| `EMAIL_REQUIRED` | 422 | Un alumno mayor de edad necesita su propio correo (es su usuario de acceso). |
+| `ACCOUNT_SUSPENDED` | 403 | La cuenta está suspendida porque se revocó la autorización de tratamiento de datos. |
 | `CYCLE_NOT_FOUND` | 404 | No se encontró el ciclo. |
 | `ACTIVE_CYCLE_EXISTS` | 409 | El alumno ya tiene un ciclo activo. Podrás registrar el pago desde la fecha límite. |
 | `CYCLE_NOT_ACTIVE` | 409 | El ciclo ya no está activo. |
@@ -78,15 +80,18 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `QR_WINDOW_CLOSED` | 409 | Ya pasó el tiempo para usar el código de esta clase. |
 | `CONFIRMATION_WINDOW_CLOSED` | 409 | Ya pasó el plazo para confirmar esta clase. |
 
-## Perfil del alumno, representante y consentimientos †
+## Perfil del alumno, representante y consentimientos
 | Código | HTTP | Mensaje en español |
 |---|---|---|
-| `INVALID_BIRTH_DATE` † | 422 | La fecha de nacimiento es obligatoria y debe ser una fecha real que no sea futura. |
-| `GUARDIAN_REQUIRED` † | 422 | Un alumno menor de 18 años necesita los datos del representante: nombre, parentesco, celular y correo. |
-| `GUARDIAN_INCOMPLETE` † | 422 | Los datos del representante van completos o ninguno: nombre, parentesco, celular y correo. |
-| `AUDIENCE_CHANGE_BLOCKED` † | 409 | No se puede cambiar la fecha de nacimiento de modo que el alumno pase de menor a adulto (o al revés) después de que se aceptó la invitación. |
-| `DATA_CONSENT_REQUIRED` † | 422 | Debes aceptar la autorización de tratamiento de datos para crear la cuenta. |
-| `CONSENT_VERSION_MISMATCH` † | 409 | El texto de la autorización cambió. Léelo de nuevo y acéptalo otra vez. |
-| `GUARDIAN_CONSENT_NOT_ALLOWED` † | 403 | La autorización del representante no se puede registrar desde una sesión de alumno. |
-| `CONSENT_ALREADY_ACTIVE` † | 409 | Esa autorización ya está vigente. |
-| `CONSENT_NOT_ACTIVE` † | 409 | No hay una autorización vigente que revocar. |
+| `INVALID_BIRTH_DATE` | 422 | La fecha de nacimiento es obligatoria y debe ser una fecha real que no sea futura. |
+| `GUARDIAN_REQUIRED` | 422 | Un alumno menor de 18 años necesita los datos del representante: nombre, parentesco, celular y correo. |
+| `GUARDIAN_INCOMPLETE` | 422 | Los datos del representante van completos o ninguno: nombre, parentesco, celular y correo. |
+| `AUDIENCE_CHANGE_BLOCKED` | 409 | No se puede cambiar la fecha de nacimiento de modo que el alumno pase de menor a adulto (o al revés) después de que se aceptó la invitación. |
+| `DATA_CONSENT_REQUIRED` | 422 | Debes aceptar la autorización de tratamiento de datos para crear la cuenta. |
+| `CONSENT_VERSION_MISMATCH` | 409 | El texto de la autorización cambió. Léelo de nuevo y acéptalo otra vez. |
+| `GUARDIAN_CONSENT_NOT_ALLOWED` | 403 | La autorización del representante no se puede registrar desde una sesión de alumno. |
+| `CONSENT_ALREADY_ACTIVE` | 409 | Esa autorización ya está vigente. |
+| `CONSENT_NOT_ACTIVE` | 409 | No hay una autorización vigente que revocar. |
+| `ADULT_CONSENT_NOT_ALLOWED` | 403 | Esta autorización la da el propio alumno mayor de edad desde su cuenta (no el entrenador, ni una cuenta que aún maneja el representante). La de WhatsApp la da el alumno o su representante, no el entrenador. |
+| `CONSENT_NOT_APPLICABLE` | 422 | Esa autorización no aplica a este alumno (la de mayor de edad no aplica a un menor, ni la del representante a un adulto). |
+| `ANONYMIZATION_PENDING` | 409 | La cuenta está marcada para anonimización: ya no se puede dar una autorización de datos. |

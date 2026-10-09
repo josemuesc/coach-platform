@@ -67,7 +67,7 @@ class SchedulingIsolationPostgresIT extends PostgresIntegrationTest {
         UUID studentA = TenantContext.callAs(a, () -> {
             availability.replaceWeekly(List.of(1, 2, 3, 4, 5, 6, 7).stream().map(d -> new WindowInput(d, "06:00", "20:00")).toList());
             UUID plan = plans.create(new PlanInput("grupal", 8, 1L, Modality.SEMI_PERSONALIZED)).id();
-            UUID student = students.create(new StudentInput("Alumno A", "sa-" + UUID.randomUUID() + "@test.co", null), userA).student().id();
+            UUID student = students.create(new StudentInput("Alumno A", "sa-" + UUID.randomUUID() + "@test.co", null, java.time.LocalDate.of(1990, 5, 1), null, null), userA).student().id();
             billing.registerPayment(student, new RegisterPaymentCommand(plan, 520_000L, PaymentMethod.CASH, null), userA);
             return student;
         });

@@ -98,24 +98,51 @@ class ConsentRulesTest {
 
     // ---- who may register what ----------------------------------------------------------------------------
 
+    private static void assertDenied(ConsentType type, ConsentRules.Channel channel, boolean guardianHolder, Code code) {
+        assertThat(codeOf(() -> ConsentRules.requireMayRegister(type, channel, guardianHolder))).isEqualTo(code);
+    }
+
     @Test
     void aGuardianAuthorizationCanNeverBeRegisteredFromAStudentSession() {
-        assertThat(codeOf(() -> ConsentRules.requireMayRegister(ConsentType.DATA_GUARDIAN, ConsentRules.Channel.STUDENT_SESSION)))
-                .isEqualTo(Code.GUARDIAN_CONSENT_NOT_ALLOWED);
+        assertDenied(ConsentType.DATA_GUARDIAN, ConsentRules.Channel.STUDENT_SESSION, true, Code.GUARDIAN_CONSENT_NOT_ALLOWED);
+        assertDenied(ConsentType.DATA_GUARDIAN, ConsentRules.Channel.STUDENT_SESSION, false, Code.GUARDIAN_CONSENT_NOT_ALLOWED);
     }
 
     @Test
     void aGuardianAuthorizationComesFromTheInvitationOrTheCoach() {
-        ConsentRules.requireMayRegister(ConsentType.DATA_GUARDIAN, ConsentRules.Channel.INVITATION);
-        ConsentRules.requireMayRegister(ConsentType.DATA_GUARDIAN, ConsentRules.Channel.COACH_SESSION);
+        ConsentRules.requireMayRegister(ConsentType.DATA_GUARDIAN, ConsentRules.Channel.INVITATION, true);
+        ConsentRules.requireMayRegister(ConsentType.DATA_GUARDIAN, ConsentRules.Channel.COACH_SESSION, true);
     }
 
     @Test
-    void theOtherTypesAreNotRestrictedByThisRule() {
-        for (ConsentType type : new ConsentType[] {ConsentType.DATA_ADULT, ConsentType.WHATSAPP}) {
-            for (ConsentRules.Channel channel : ConsentRules.Channel.values()) {
-                ConsentRules.requireMayRegister(type, channel);
-            }
-        }
+    void anAdultAuthorizationIsNeverRegisteredByTheCoach() {
+        assertDenied(ConsentType.DATA_ADULT, ConsentRules.Channel.COACH_SESSION, false, Code.ADULT_CONSENT_NOT_ALLOWED);
+        assertDenied(ConsentType.DATA_ADULT, ConsentRules.Channel.COACH_SESSION, true, Code.ADULT_CONSENT_NOT_ALLOWED);
+    }
+
+    @Test
+    void anAdultAuthorizationCannotComeFromAnAccountTheGuardianStillHolds() {
+        assertDenied(ConsentType.DATA_ADULT, ConsentRules.Channel.STUDENT_SESSION, true, Code.ADULT_CONSENT_NOT_ALLOWED);
+        ConsentRules.requireMayRegister(ConsentType.DATA_ADULT, ConsentRules.Channel.STUDENT_SESSION, false);
+        ConsentRules.requireMayRegister(ConsentType.DATA_ADULT, ConsentRules.Channel.INVITATION, true);   // the future "adult invitation"
+        ConsentRules.requireMayRegister(ConsentType.DATA_ADULT, ConsentRules.Channel.INVITATION, false);
+    }
+
+    @Test
+    void whatsappIsGivenByTheStudentSessionOrTheInvitationNotByTheCoach() {
+        ConsentRules.requireMayRegister(ConsentType.WHATSAPP, ConsentRules.Channel.STUDENT_SESSION, true);
+        ConsentRules.requireMayRegister(ConsentType.WHATSAPP, ConsentRules.Channel.STUDENT_SESSION, false);
+        ConsentRules.requireMayRegister(ConsentType.WHATSAPP, ConsentRules.Channel.INVITATION, true);
+        assertDenied(ConsentType.WHATSAPP, ConsentRules.Channel.COACH_SESSION, false, Code.ADULT_CONSENT_NOT_ALLOWED);
+    }
+
+    @Test
+    void theTypeMustApplyToTheStudent() {
+        ConsentRules.requireTypeApplies(ConsentType.DATA_ADULT, Audience.ADULT);
+        ConsentRules.requireTypeApplies(ConsentType.DATA_GUARDIAN, Audience.GUARDIAN);
+        ConsentRules.requireTypeApplies(ConsentType.WHATSAPP, Audience.ADULT);
+        ConsentRules.requireTypeApplies(ConsentType.WHATSAPP, Audience.GUARDIAN);
+        assertThat(codeOf(() -> ConsentRules.requireTypeApplies(ConsentType.DATA_ADULT, Audience.GUARDIAN))).isEqualTo(Code.CONSENT_NOT_APPLICABLE);
+        assertThat(codeOf(() -> ConsentRules.requireTypeApplies(ConsentType.DATA_GUARDIAN, Audience.ADULT))).isEqualTo(Code.CONSENT_NOT_APPLICABLE);
     }
 }

@@ -57,6 +57,10 @@ public class AppUser {
     public UserRole getRole() { return role; }
     public boolean isActive() { return active; }
 
+    public void deactivate() {
+        this.active = false;
+    }
+
     public void changePassword(String newHash) {
         this.passwordHash = newHash;
     }

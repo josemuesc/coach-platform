@@ -91,7 +91,7 @@ public abstract class ApiIntegrationTest {
     /** Creates a student; returns the full JSON (student + inviteUrl). */
     protected String createStudentJson(String token, String name, String email) throws Exception {
         MvcResult r = mvc.perform(withToken(post("/api/coach/students"), token).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"fullName\":\"" + name + "\",\"email\":\"" + email + "\",\"whatsappPhone\":\"3001234567\"}"))
+                        .content("{\"fullName\":\"" + name + "\",\"email\":\"" + email + "\",\"whatsappPhone\":\"3001234567\",\"birthDate\":\"1990-05-01\"}"))
                 .andExpect(status().isCreated()).andReturn();
         return json(r);
     }

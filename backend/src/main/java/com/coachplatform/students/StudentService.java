@@ -1,13 +1,25 @@
 package com.coachplatform.students;
 
 import com.coachplatform.common.ApiException;
+import com.coachplatform.students.api.Audience;
+import com.coachplatform.students.api.AgeAlert;
+import com.coachplatform.students.api.ConsentType;
+import com.coachplatform.students.api.GuardianInput;
+import com.coachplatform.students.api.GuardianView;
 import com.coachplatform.students.api.InvitationIssued;
 import com.coachplatform.students.api.StudentCreated;
 import com.coachplatform.students.api.StudentInput;
 import com.coachplatform.students.api.StudentSummary;
+import com.coachplatform.students.domain.ConsentEvent;
+import com.coachplatform.students.domain.ConsentLedger;
+import com.coachplatform.students.domain.GuardianData;
+import com.coachplatform.students.domain.GuardianRules;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -21,36 +33,58 @@ public class StudentService {
 
     private final StudentRepository students;
     private final InvitationRepository invitations;
+    private final ConsentEvents consentEvents;
+    private final GuardianRules guardianRules;
+    private final ConsentLedger ledger;
     private final Clock clock;
     private final Duration invitationTtl;
 
-    public StudentService(StudentRepository students, InvitationRepository invitations, Clock clock,
-                          @Value("${app.invitations.expiry-days:7}") long expiryDays) {
+    StudentService(StudentRepository students, InvitationRepository invitations, ConsentEvents consentEvents,
+                   GuardianRules guardianRules, ConsentLedger ledger, Clock clock,
+                   @Value("${app.invitations.expiry-days:7}") long expiryDays) {
         this.students = students;
         this.invitations = invitations;
+        this.consentEvents = consentEvents;
+        this.guardianRules = guardianRules;
+        this.ledger = ledger;
         this.clock = clock;
         this.invitationTtl = Duration.ofDays(expiryDays);
     }
 
     @Transactional
     public StudentCreated create(StudentInput input, UUID createdByUserId) {
-        String email = normalizeEmail(input.email());
+        LocalDate birthDate = input.birthDate();
+        GuardianData guardian = guardianOf(input.guardian());
+        guardianRules.requireValidBirthDate(birthDate);
+        guardianRules.requireGuardianData(birthDate, guardian);
+        String email = loginEmail(birthDate, input.email(), guardian);
         if (students.existsByEmail(email)) {
             throw new ApiException(HttpStatus.CONFLICT, "STUDENT_EMAIL_EXISTS");
         }
-        Student student = students.save(new Student(input.fullName().trim(), email, blankToNull(input.whatsappPhone())));
-        return new StudentCreated(toSummary(student), issueInvitation(student, createdByUserId));
+        Student student = new Student(input.fullName().trim(), email, blankToNull(input.whatsappPhone()));
+        student.updateProfile(blankToNull(input.goal()), birthDate, guardian);
+        student = students.save(student);
+        return new StudentCreated(toSummary(student, Set.of()), issueInvitation(student, createdByUserId));
     }
 
     @Transactional(readOnly = true)
     public List<StudentSummary> list() {
-        return students.findAllByOrderByFullNameAsc().stream().map(StudentService::toSummary).toList();
+        Map<UUID, List<ConsentEvent>> events = consentEvents.all();
+        return students.findAllByOrderByFullNameAsc().stream()
+                .map(s -> toSummary(s, ledger.activeTypes(events.getOrDefault(s.getId(), List.of())))).toList();
     }
 
-    /** The student behind a logged-in STUDENT user (tenant-filtered like every query). 404 if the user is no student. */
+    /**
+     * The student behind a logged-in STUDENT user (tenant-filtered like every query). 404 if the user is no student; 403
+     * ACCOUNT_SUSPENDED if a data consent was revoked (a token issued before the suspension stops working here).
+     */
     @Transactional(readOnly = true)
     public StudentSummary findByUserId(UUID userId) {
-        return toSummary(students.findByUserId(userId).orElseThrow(StudentNotFoundException::new));
+        Student student = students.findByUserId(userId).orElseThrow(StudentNotFoundException::new);
+        if (student.isMarkedForAnonymization()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "ACCOUNT_SUSPENDED");
+        }
+        return toSummary(student);
     }
 
     @Transactional(readOnly = true)
@@ -61,7 +95,14 @@ public class StudentService {
     @Transactional
     public StudentSummary update(UUID studentId, StudentInput input, Boolean active) {
         Student student = require(studentId);
-        String email = normalizeEmail(input.email());
+        LocalDate birthDate = input.birthDate();
+        GuardianData guardian = guardianOf(input.guardian());
+        guardianRules.requireValidBirthDate(birthDate);
+        if (student.getBirthDate() != null) {
+            guardianRules.requireAudienceChangeAllowed(student.getBirthDate(), birthDate, student.hasAccount());
+        }
+        guardianRules.requireGuardianData(birthDate, guardian);
+        String email = loginEmail(birthDate, input.email(), guardian);
         if (!email.equals(student.getEmail())) {
             if (student.hasAccount()) {
                 throw new ApiException(HttpStatus.CONFLICT, "EMAIL_LOCKED");
@@ -71,6 +112,7 @@ public class StudentService {
             }
         }
         student.update(input.fullName().trim(), email, blankToNull(input.whatsappPhone()));
+        student.updateProfile(blankToNull(input.goal()), birthDate, guardian);
         if (active != null) {
             student.setActive(active);
         }
@@ -108,9 +150,38 @@ public class StudentService {
         return new InvitationIssued(token, expiresAt);
     }
 
-    private static StudentSummary toSummary(Student s) {
-        return new StudentSummary(s.getId(), s.getFullName(), s.getEmail(), s.getWhatsappPhone(), s.isActive(),
-                s.hasAccount());
+    /** The login: the guardian's email while the student is under 18 (the guardian holds the account), else the student's own. */
+    private String loginEmail(LocalDate birthDate, String inputEmail, GuardianData guardian) {
+        if (guardianRules.isMinor(birthDate)) {
+            return guardian.email();
+        }
+        if (inputEmail == null || inputEmail.isBlank()) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_ENTITY, "EMAIL_REQUIRED");
+        }
+        return normalizeEmail(inputEmail);
+    }
+
+    private StudentSummary toSummary(Student s) {
+        return toSummary(s, ledger.activeTypes(consentEvents.of(s.getId())));
+    }
+
+    private StudentSummary toSummary(Student s, Set<ConsentType> active) {
+        GuardianData g = s.guardian();
+        GuardianView guardian = g.isEmpty() ? null : new GuardianView(g.name(), g.relationship(), g.phone(), g.email());
+        LocalDate birth = s.getBirthDate();
+        if (birth == null) {   // created before V5: no birth date yet, so no age information
+            return new StudentSummary(s.getId(), s.getFullName(), s.getEmail(), s.getWhatsappPhone(), s.isActive(), s.hasAccount(),
+                    s.getGoal(), null, guardian, null, false, null, 0, AgeAlert.NONE, s.isMarkedForAnonymization());
+        }
+        var age = guardianRules.status(birth, active);
+        Audience audience = age.minor() ? Audience.GUARDIAN : Audience.ADULT;
+        return new StudentSummary(s.getId(), s.getFullName(), s.getEmail(), s.getWhatsappPhone(), s.isActive(), s.hasAccount(),
+                s.getGoal(), birth, guardian, audience, age.minor(), age.turnsAdultOn(), age.daysUntilAdult(), age.alert(),
+                s.isMarkedForAnonymization());
+    }
+
+    private static GuardianData guardianOf(GuardianInput in) {
+        return in == null ? GuardianData.NONE : new GuardianData(in.name(), in.relationship(), in.phone(), in.email());
     }
 
     private static String normalizeEmail(String email) {

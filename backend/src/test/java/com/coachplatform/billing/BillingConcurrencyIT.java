@@ -46,7 +46,7 @@ class BillingConcurrencyIT extends PostgresIntegrationTest {
         UUID userId = users.findByEmailIgnoreCase(email).orElseThrow().getId();
         return TenantContext.callAs(coachId, () -> {
             UUID planId = plans.create(new PlanInput("8 clases", 8, 520_000L, com.coachplatform.billing.api.Modality.PERSONALIZED)).id();
-            UUID studentId = students.create(new StudentInput("Ana", "alumno-" + UUID.randomUUID() + "@test.co", null), userId)
+            UUID studentId = students.create(new StudentInput("Ana", "alumno-" + UUID.randomUUID() + "@test.co", null, java.time.LocalDate.of(1990, 5, 1), null, null), userId)
                     .student().id();
             return new Fixture(coachId, userId, planId, studentId);
         });

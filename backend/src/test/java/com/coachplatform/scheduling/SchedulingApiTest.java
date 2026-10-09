@@ -63,7 +63,7 @@ public abstract class SchedulingApiTest extends ApiIntegrationTest {
         String json = createStudentJson(coach.token(), name, email);
         String inviteToken = tokenFromInviteUrl(JsonPath.read(json, "$.inviteUrl"));
         mvc.perform(post("/api/invitations/accept").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"" + inviteToken + "\",\"password\":\"" + PASSWORD + "\"}")).andExpect(status().isOk());
+                .content(com.coachplatform.support.ConsentFixtures.acceptJson(inviteToken, PASSWORD))).andExpect(status().isOk());
         return new StudentCtx(JsonPath.read(json, "$.student.id"), name, email, login(email, PASSWORD));
     }
 
@@ -162,7 +162,8 @@ public abstract class SchedulingApiTest extends ApiIntegrationTest {
     protected void putSettings(CoachCtx c, int cancelWindow, int duration, int groupCapacity, int expectedStatus) throws Exception {
         mvc.perform(withToken(put("/api/coach/settings"), c.token()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"cancelWindowHours\":" + cancelWindow + ",\"classDurationMinutes\":" + duration
-                        + ",\"expiringSoonDays\":5,\"expiringSoonClasses\":1,\"maxExtensionDays\":60,\"defaultGroupCapacity\":" + groupCapacity + "}"))
+                        + ",\"expiringSoonDays\":5,\"expiringSoonClasses\":1,\"maxExtensionDays\":60,\"defaultGroupCapacity\":" + groupCapacity
+                        + ",\"confirmationWindowHours\":72,\"qrOpenMinutesBefore\":15,\"qrCloseHoursAfterEnd\":2,\"gymConsentConfirmed\":false}"))
                 .andExpect(status().is(expectedStatus));
     }
 

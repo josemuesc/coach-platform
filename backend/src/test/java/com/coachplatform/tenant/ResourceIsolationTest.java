@@ -42,7 +42,7 @@ class ResourceIsolationTest extends ApiIntegrationTest {
                 .andExpect(jsonPath("$[0].id").value(studentB));
         mvc.perform(withToken(get("/api/coach/students/" + studentA), b)).andExpect(status().isNotFound());
         mvc.perform(withToken(put("/api/coach/students/" + studentA), b).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"data\":{\"fullName\":\"x\",\"email\":\"x@test.co\"}}")).andExpect(status().isNotFound());
+                        .content("{\"data\":{\"fullName\":\"x\",\"email\":\"x@test.co\",\"birthDate\":\"1990-05-01\"}}")).andExpect(status().isNotFound());
         mvc.perform(withToken(post("/api/coach/students/" + studentA + "/invitations"), b)).andExpect(status().isNotFound());
 
         // ---- payments

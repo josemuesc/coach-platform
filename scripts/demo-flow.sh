@@ -23,6 +23,16 @@ COACH_PASSWORD="Demo-Only-Pass-1"          # fake, for this script only
 STUDENT_EMAIL="alumno.demo.${RUN_ID}@example.com"
 STUDENT_PASSWORD="Demo-Student-Pass-1"     # fake, for this script only
 
+# The versions of the authorization texts in force are read from docs/consent (the same files the backend serves).
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+consent_version() { awk -F': ' '/^version:/{print $2; exit}' "$ROOT_DIR/docs/consent/$1.md"; }
+DATA_ADULT_V="$(consent_version DATA_ADULT)"; DATA_GUARDIAN_V="$(consent_version DATA_GUARDIAN)"; WHATSAPP_V="$(consent_version WHATSAPP)"
+# accept_body TOKEN PASSWORD [guardian]  -> the JSON that accepts the data authorization (adult or guardian) and WhatsApp
+accept_body() {
+  local dv="$DATA_ADULT_V"; [ "${3:-}" = "guardian" ] && dv="$DATA_GUARDIAN_V"
+  echo "{\"token\":\"$1\",\"password\":\"$2\",\"acceptData\":true,\"dataVersion\":\"$dv\",\"acceptWhatsapp\":true,\"whatsappVersion\":\"$WHATSAPP_V\"}"
+}
+
 TMP_BODY="$(mktemp)"
 trap 'rm -f "$TMP_BODY"' EXIT
 
@@ -71,10 +81,10 @@ make_student() {
   local name="$1" plan="$2" key email password="Demo-${1%% *}-Pass-1"
   key="$(echo "${name%% *}" | tr '[:lower:]' '[:upper:]')"
   email="$(echo "${name%% *}" | tr '[:upper:]' '[:lower:]').demo.${RUN_ID}@example.com"
-  req POST /api/coach/students "{\"fullName\":\"$name\",\"email\":\"$email\"}" "$COACH_TOKEN"; expect 201
+  req POST /api/coach/students "{\"fullName\":\"$name\",\"email\":\"$email\",\"birthDate\":\"1990-05-01\"}" "$COACH_TOKEN"; expect 201
   local sid invite
   sid="$(jget student.id)"; invite="$(jget inviteUrl)"
-  req POST /api/invitations/accept "{\"token\":\"${invite##*/}\",\"password\":\"$password\"}"; expect 200
+  req POST /api/invitations/accept "$(accept_body "${invite##*/}" "$password")"; expect 200
   req POST "/api/coach/students/$sid/payments" "{\"planId\":\"$plan\",\"method\":\"CASH\",\"amountCop\":400000}" "$COACH_TOKEN"; expect 201
   req POST /api/auth/login "{\"email\":\"$email\",\"password\":\"$password\"}"; expect 200
   printf -v "STUDENT_ID_$key" '%s' "$sid"
@@ -137,7 +147,7 @@ echo "  windows saved: $(echo "$BODY" | python3 -c 'import sys,json; print(len(j
 
 step "3. Create a student; the response carries the one-time invitation link (POST /api/coach/students)"
 req POST /api/coach/students \
-  "{\"fullName\":\"Ana Demo\",\"email\":\"$STUDENT_EMAIL\",\"whatsappPhone\":\"3001234567\"}" "$COACH_TOKEN"
+  "{\"fullName\":\"Ana Demo\",\"email\":\"$STUDENT_EMAIL\",\"whatsappPhone\":\"3001234567\",\"birthDate\":\"1990-05-01\",\"goal\":\"Ganar fuerza\"}" "$COACH_TOKEN"
 expect 201
 STUDENT_ID="$(jget student.id)"
 INVITE_URL="$(jget inviteUrl)"
@@ -181,12 +191,12 @@ step "8. The student previews and accepts the invitation, choosing a password (p
 req POST /api/invitations/preview "{\"token\":\"$INVITE_TOKEN\"}"
 expect 200
 echo "  preview:"; show
-req POST /api/invitations/accept "{\"token\":\"$INVITE_TOKEN\",\"password\":\"$STUDENT_PASSWORD\"}"
+req POST /api/invitations/accept "$(accept_body "$INVITE_TOKEN" "$STUDENT_PASSWORD")"
 expect 200
 echo "  accepted for: $(jget email)"
 
 step "8b. The same link cannot be used twice (expect 400 INVALID_INVITATION)"
-req POST /api/invitations/accept "{\"token\":\"$INVITE_TOKEN\",\"password\":\"Another-Pass-123\"}"
+req POST /api/invitations/accept "$(accept_body "$INVITE_TOKEN" "Another-Pass-123")"
 expect 400
 show
 
@@ -333,6 +343,38 @@ echo "  a 49-hour cancellation window is rejected: HTTP $STATUS (allowed range i
 req PUT /api/coach/settings '{"cancelWindowHours":2,"classDurationMinutes":60,"expiringSoonDays":5,"expiringSoonClasses":1,"maxExtensionDays":60,"defaultGroupCapacity":11}' "$COACH_TOKEN"
 expect 400
 echo "  a default group capacity of 11 is rejected: HTTP $STATUS (allowed range is 2-10)"
+
+step "17b. Gym consent, confirmation window and QR window in the settings (the server dates the gym consent)"
+req PUT /api/coach/settings '{"cancelWindowHours":2,"classDurationMinutes":60,"expiringSoonDays":5,"expiringSoonClasses":1,"maxExtensionDays":60,"defaultGroupCapacity":4,"confirmationWindowHours":96,"qrOpenMinutesBefore":15,"qrCloseHoursAfterEnd":2,"gymConsentConfirmed":true}' "$COACH_TOKEN"
+expect 200
+echo "  gym consent confirmed at: $(jget gymConsentConfirmedAt); confirmation window: $(jget confirmationWindowHours) h"
+
+step "17c. A minor: the guardian is required, holds the account, accepts the guardian text; WhatsApp can be revoked"
+req POST /api/coach/students '{"fullName":"Nico Demo","birthDate":"2010-05-01"}' "$COACH_TOKEN"
+expect 422
+echo "  a minor without guardian is rejected: $(jget code)"
+KID_GUARDIAN_EMAIL="madre.demo.${RUN_ID}@example.com"
+req POST /api/coach/students "{\"fullName\":\"Nico Demo\",\"birthDate\":\"2010-05-01\",\"goal\":\"Bajar de peso\",\"guardian\":{\"name\":\"Marta Demo\",\"relationship\":\"madre\",\"phone\":\"3001112233\",\"email\":\"$KID_GUARDIAN_EMAIL\"}}" "$COACH_TOKEN"
+expect 201
+KID_ID="$(jget student.id)"; KID_TOKEN="$(jget inviteUrl)"; KID_TOKEN="${KID_TOKEN##*/}"
+echo "  the login of the minor is the guardian's email: $(jget student.email); audience: $(jget student.audience)"
+req POST /api/invitations/preview "{\"token\":\"$KID_TOKEN\"}"
+expect 200
+echo "  texts offered: $(echo "$BODY" | python3 -c 'import sys,json; print([c["type"] for c in json.load(sys.stdin)["consents"]])')"
+req POST /api/invitations/accept "$(accept_body "$KID_TOKEN" "Demo-Madre-Pass-1" guardian)"
+expect 200
+req POST /api/auth/login "{\"email\":\"$KID_GUARDIAN_EMAIL\",\"password\":\"Demo-Madre-Pass-1\"}"
+expect 200
+GUARDIAN_TOKEN="$(jget token)"
+req POST /api/student/consents/DATA_GUARDIAN/accept "{\"version\":\"$DATA_GUARDIAN_V\"}" "$GUARDIAN_TOKEN"
+expect 403
+echo "  the guardian text cannot be registered from a student session: $(jget code)"
+req POST /api/student/consents/WHATSAPP/revoke '{}' "$GUARDIAN_TOKEN"
+expect 200
+echo "  WhatsApp revoked (the account keeps working)"
+req GET "/api/coach/students/$KID_ID/consents" "" "$COACH_TOKEN"
+expect 200
+show
 
 step "18. Billing overview for the coach (GET /api/coach/billing/overview)"
 req GET /api/coach/billing/overview "" "$COACH_TOKEN"

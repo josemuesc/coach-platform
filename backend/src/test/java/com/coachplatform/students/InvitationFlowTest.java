@@ -29,7 +29,7 @@ class InvitationFlowTest extends ApiIntegrationTest {
 
     private ResultActions accept(String token, String password, String ip) throws Exception {
         return mvc.perform(fromIp(post("/api/invitations/accept"), ip).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"token\":\"" + token + "\",\"password\":\"" + password + "\"}"));
+                .content(com.coachplatform.support.ConsentFixtures.acceptJson(token, password)));
     }
 
     private String inviteToken(String studentJson) {

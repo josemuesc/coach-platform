@@ -5,6 +5,7 @@ import static com.coachplatform.students.domain.StudentRuleException.Code.GUARDI
 import static com.coachplatform.students.domain.StudentRuleException.Code.GUARDIAN_REQUIRED;
 import static com.coachplatform.students.domain.StudentRuleException.Code.INVALID_BIRTH_DATE;
 
+import com.coachplatform.students.api.AgeAlert;
 import com.coachplatform.students.api.Audience;
 import com.coachplatform.students.api.ConsentType;
 import java.time.Clock;
@@ -27,15 +28,6 @@ public final class GuardianRules {
     public static final int ADULT_SOON_DAYS = 60;
     private static final LocalDate EARLIEST_BIRTH_DATE = LocalDate.of(1900, 1, 1);
     private static final ZoneId BOGOTA = ZoneId.of("America/Bogota");
-
-    /** Alert shown to the coach about the age of a student. */
-    public enum AgeAlert {
-        NONE,
-        /** A minor who turns 18 in {@link #ADULT_SOON_DAYS} days or fewer. */
-        TURNS_ADULT_SOON,
-        /** Already 18 but the guardian is still the holder: a new authorization from the student is due. */
-        TURNED_ADULT_NEEDS_AUTHORIZATION
-    }
 
     public record AgeStatus(boolean minor, LocalDate turnsAdultOn, long daysUntilAdult, boolean turnedAdult, AgeAlert alert) {
     }

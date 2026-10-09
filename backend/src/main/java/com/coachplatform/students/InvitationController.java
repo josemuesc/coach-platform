@@ -4,6 +4,7 @@ import com.coachplatform.students.api.InvitationAccepted;
 import com.coachplatform.students.api.InvitationPreview;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,7 +29,9 @@ class InvitationController {
         }
     }
 
-    record AcceptRequest(@NotBlank @Size(max = 100) String token, @NotBlank @Size(min = 10, max = 72) String password) {
+    record AcceptRequest(@NotBlank @Size(max = 100) String token, @NotBlank @Size(min = 10, max = 72) String password,
+                         @NotNull Boolean acceptData, @Size(max = 30) String dataVersion,
+                         @NotNull Boolean acceptWhatsapp, @Size(max = 30) String whatsappVersion) {
         @Override
         public String toString() {
             return "AcceptRequest[token=<redacted>, password=<redacted>]";
@@ -42,6 +45,7 @@ class InvitationController {
 
     @PostMapping("/accept")
     InvitationAccepted accept(@Valid @RequestBody AcceptRequest req) {
-        return invitations.accept(req.token(), req.password());
+        return invitations.accept(req.token(), req.password(), req.acceptData(), req.dataVersion(), req.acceptWhatsapp(),
+                req.whatsappVersion());
     }
 }
