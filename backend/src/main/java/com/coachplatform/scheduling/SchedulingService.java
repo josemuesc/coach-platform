@@ -14,6 +14,7 @@ import com.coachplatform.scheduling.api.AffectedStudent;
 import com.coachplatform.scheduling.api.AgendaView;
 import com.coachplatform.scheduling.api.AttendanceStatus;
 import com.coachplatform.scheduling.api.AttendanceView;
+import com.coachplatform.scheduling.api.AuditAction;
 import com.coachplatform.scheduling.api.AuditMethod;
 import com.coachplatform.scheduling.api.CancelResult;
 import com.coachplatform.scheduling.api.EventCancelResult;
@@ -89,6 +90,7 @@ public class SchedulingService {
     private final BookingRules bookingRules;
     private final CancellationPolicy cancellation;
     private final AttendanceMarker marker;
+    private final AttendanceAuditWriter audit;
     private final EventRules eventRules;
     private final SlotCalendar calendar;
     private final Clock clock;
@@ -97,7 +99,7 @@ public class SchedulingService {
     SchedulingService(StudentService students, BillingService billing, CoachService coaches, ClassSessionRepository events,
                       SessionAttendanceRepository attendances, AvailabilityRuleRepository availability,
                       AvailabilityBlockRepository blocks, SchedulingViews views, BookingRules bookingRules,
-                      CancellationPolicy cancellation, AttendanceMarker marker, EventRules eventRules,
+                      CancellationPolicy cancellation, AttendanceMarker marker, AttendanceAuditWriter audit, EventRules eventRules,
                       SlotCalendar calendar, Clock clock, TransactionTemplate tx) {
         this.tx = tx;
         this.students = students;
@@ -111,6 +113,7 @@ public class SchedulingService {
         this.bookingRules = bookingRules;
         this.cancellation = cancellation;
         this.marker = marker;
+        this.audit = audit;
         this.eventRules = eventRules;
         this.calendar = calendar;
         this.clock = clock;
@@ -213,7 +216,7 @@ public class SchedulingService {
         SchedulingSettings settings = coaches.schedulingSettings(TenantContext.get());
         CycleSummary cycle = billing.activeCycle(studentId).orElse(null);
         Placement placement = plan(studentId, cycle, startsAt, byUser, byStudent, true, override, overrideReason, settings, null);
-        SessionAttendance created = commit(placement, studentId, cycle, null, byUser, overrideReason);
+        SessionAttendance created = commit(placement, studentId, cycle, null, byUser, byStudent, overrideReason);
         return views.attendanceView(created, !byStudent);
     }
 
@@ -271,6 +274,7 @@ public class SchedulingService {
             ClassSession event = events.findByIdForUpdate(eventId).orElseThrow(EventNotFoundException::new);   // 3. the event
             place.cancel(plain, byUser, reason, now);
             attendances.saveAndFlush(place);
+            audit.record(place, AuditAction.CANCEL, AttendanceStatus.SCHEDULED, plain, methodOf(byStudent), byUser, roleOf(byStudent), reason);
             cancelEventIfEmpty(event, byUser);
             return new CancelResult(views.attendanceView(place, !byStudent), null);
         }
@@ -280,10 +284,14 @@ public class SchedulingService {
         Placement placement = plan(place.getStudentId(), cycle, newStartsAt, byUser, byStudent, false, override, overrideReason, settings, eventId);
 
         ClassSession old = placement.locked().get(eventId);
-        place.cancel(byStudent ? AttendanceStatus.RESCHEDULED : AttendanceStatus.CANCELLED_BY_COACH, byUser, reason, now);
+        AttendanceStatus moved = byStudent ? AttendanceStatus.RESCHEDULED : AttendanceStatus.CANCELLED_BY_COACH;
+        place.cancel(moved, byUser, reason, now);
         attendances.saveAndFlush(place);
+        // the student's move is a RESCHEDULE; the coach's is a CANCEL of the old place (plus a BOOK of the new one)
+        audit.record(place, byStudent ? AuditAction.RESCHEDULE : AuditAction.CANCEL, AttendanceStatus.SCHEDULED, moved,
+                methodOf(byStudent), byUser, roleOf(byStudent), reason);
         cancelEventIfEmpty(old, byUser);    // flushed BEFORE a new event is created: the new one may overlap the old one's time
-        SessionAttendance replacement = commit(placement, place.getStudentId(), cycle, place.getId(), byUser, overrideReason);
+        SessionAttendance replacement = commit(placement, place.getStudentId(), cycle, place.getId(), byUser, byStudent, overrideReason);
         return new CancelResult(views.attendanceView(place, !byStudent), views.attendanceView(replacement, !byStudent));
     }
 
@@ -327,6 +335,8 @@ public class SchedulingService {
         for (SessionAttendance a : places) {
             if (a.getStatus() == AttendanceStatus.SCHEDULED) {
                 a.cancel(AttendanceStatus.CANCELLED_BY_COACH, coachUserId, reason.trim(), now);
+                audit.record(a, AuditAction.CANCEL, AttendanceStatus.SCHEDULED, AttendanceStatus.CANCELLED_BY_COACH, AuditMethod.COACH,
+                        coachUserId, ActorRole.COACH, reason.trim());
                 affected.add(new AffectedStudent(a.getStudentId(), names.get(a.getStudentId()), a.getId()));
             }
         }
@@ -460,7 +470,7 @@ public class SchedulingService {
 
     /** Writes what {@link #plan} decided: the event when it has to be created, and the student's place in it. */
     private SessionAttendance commit(Placement placement, UUID studentId, CycleSummary cycle, UUID rescheduledFrom, UUID byUser,
-                                     String overrideReason) {
+                                     boolean byStudent, String overrideReason) {
         Decision d = placement.decision();
         ClassSession event = placement.joinEvent();
         try {
@@ -471,7 +481,9 @@ public class SchedulingService {
             if (d.overridden()) {
                 place.markOverride(byUser, overrideReason.trim());
             }
-            return attendances.saveAndFlush(place);
+            SessionAttendance saved = attendances.saveAndFlush(place);
+            audit.record(saved, AuditAction.BOOK, null, AttendanceStatus.SCHEDULED, methodOf(byStudent), byUser, roleOf(byStudent), null);
+            return saved;
         } catch (DataIntegrityViolationException e) {
             // The exclusion constraint / unique index caught what the checks above could not see.
             throw new SchedulingRuleException(SchedulingRuleException.Code.SLOT_TAKEN, "That time is already taken");
@@ -496,6 +508,14 @@ public class SchedulingService {
         Object[] row = attendances.findOwnerAndSessionById(attendanceId).stream().findFirst()
                 .orElseThrow(AttendanceNotFoundException::new);
         return (UUID) row[0];
+    }
+
+    private static AuditMethod methodOf(boolean byStudent) {
+        return byStudent ? AuditMethod.STUDENT : AuditMethod.COACH;
+    }
+
+    private static ActorRole roleOf(boolean byStudent) {
+        return byStudent ? ActorRole.STUDENT : ActorRole.COACH;
     }
 
     private List<Window> windows() {

@@ -3,6 +3,7 @@ package com.coachplatform.security;
 import jakarta.servlet.DispatcherType;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -31,9 +35,11 @@ public class SecurityConfig {
     public static final String INVITATION_ACCEPT_PATH = "/api/invitations/accept";
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter, RateLimitFilter rateLimitFilter)
+    SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter, RateLimitFilter rateLimitFilter,
+                                    @Qualifier("corsConfigurationSource") CorsConfigurationSource corsSource)
             throws Exception {
         http.csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsSource))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(a -> a
@@ -43,12 +49,34 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/register-coach", LOGIN_PATH,
                                 INVITATION_PREVIEW_PATH, INVITATION_ACCEPT_PATH).permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        // Open to the filter chain on purpose: springdoc registers these paths only with app.openapi.enabled=true,
+                        // so in any other profile an anonymous call gets a plain 404 (nothing there), not a 401 that hints at them.
+                        .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .requestMatchers("/api/coach/**").hasRole("COACH")
                         .requestMatchers("/api/student/**").hasRole("STUDENT")
                         .anyRequest().authenticated())
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /**
+     * Only the frontend's own origin (APP_FRONTEND_URL, scheme + host + port; any path is dropped) may call the API from a browser.
+     * Authentication is a bearer token in a header, so credentials/cookies are NOT allowed and no wildcard is ever used.
+     */
+    @Bean
+    CorsConfigurationSource corsConfigurationSource(@Value("${app.frontend-url}") String frontendUrl) {
+        java.net.URI uri = java.net.URI.create(frontendUrl.trim());
+        String origin = uri.getScheme() + "://" + uri.getAuthority();
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of(origin));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowCredentials(false);
+        config.setMaxAge(Duration.ofHours(1));
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        return source;
     }
 
     @Bean

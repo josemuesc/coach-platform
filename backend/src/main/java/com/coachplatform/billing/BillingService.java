@@ -103,7 +103,7 @@ public class BillingService {
             Cycle cycle = cycles.saveAndFlush(new Cycle(studentId, plan.getId(), plan.getModality(), result.newCycle()));
             if (!toTransfer.isEmpty()) {
                 cycleSessions.moveFutureAttendances(previous.orElseThrow().getId(), cycle.getId(), plan.getModality(),
-                        modalityConflicts.isEmpty() ? null : recordedBy,
+                        recordedBy, modalityConflicts.isEmpty() ? null : recordedBy,
                         modalityConflicts.isEmpty() ? null : cmd.overrideReason().trim());
             }
             long amount = cmd.amountCop();   // mandatory (validated at the API): what was really received

@@ -3,9 +3,9 @@
 Toda respuesta de error lleva `{"code": "...", "message": "..."}` (a veces `details`). El frontend decide por `code`, nunca por el
 texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los mensajes que llegan del servidor están en inglés.
 
-> Estado: documento inicial (Fase 3.5). Antes de cerrar el contrato con el frontend se añadirá una prueba que compare esta tabla con
-> todos los códigos del código fuente (enums `*RuleException.Code`, `ApiException` y los manejadores) y falle si falta o sobra alguno.
-> Los códigos marcados con existen en el dominio y están probados, pero su HTTP definitivo se cablea con los servicios (Fase 3.5).
+> `ErrorCodesDocTest` compara esta tabla con el código: falla si el servidor puede enviar un código que no está aquí, si aquí
+> hay uno que ningún código produce, o si el HTTP de un código declarado en `ApiException` o en los manejadores no coincide. LIMITACIÓN:
+> el HTTP de los códigos de los enums `*RuleException.Code` se decide en cada manejador (`switch`) y la prueba no lo verifica.
 
 ## Generales y de acceso
 | Código | HTTP | Mensaje en español |

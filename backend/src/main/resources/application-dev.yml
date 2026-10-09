@@ -1,0 +1,4 @@
+# Local development only. Never activate together with `prod`.
+app:
+  openapi:
+    enabled: true

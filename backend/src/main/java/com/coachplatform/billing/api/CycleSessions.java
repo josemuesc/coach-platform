@@ -23,7 +23,9 @@ public interface CycleSessions {
     /**
      * Moves the not-yet-started SCHEDULED attendances of a cycle into another one (renewal on the deadline day).
      * When {@code overrideBy} is not null, the attendances whose event modality differs from {@code newModality} are
-     * flagged as overrides (who and why) instead of being refused.
+     * flagged as overrides (who and why) instead of being refused. Each move is audited as a TRANSFER by {@code actorUserId}
+     * (the coach recording the payment), with a reason naming the source and destination cycles.
      */
-    void moveFutureAttendances(UUID fromCycleId, UUID toCycleId, Modality newModality, UUID overrideBy, String overrideReason);
+    void moveFutureAttendances(UUID fromCycleId, UUID toCycleId, Modality newModality, UUID actorUserId, UUID overrideBy,
+                               String overrideReason);
 }

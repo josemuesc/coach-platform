@@ -89,7 +89,8 @@ class SchedulingRetryTest {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         SlotCalendar calendar = new SlotCalendar(BOGOTA);
         service = new SchedulingService(students, billing, coaches, events, attendances, availability, blocks, views,
-                new BookingRules(clock, calendar), new CancellationPolicy(clock), mock(AttendanceMarker.class), new EventRules(clock),
+                new BookingRules(clock, calendar), new CancellationPolicy(clock), mock(AttendanceMarker.class), mock(AttendanceAuditWriter.class),
+                new EventRules(clock),
                 calendar, clock, tx);
 
         when(coaches.schedulingSettings(any())).thenReturn(new SchedulingSettings(2, 60, 4, 72, 15, 2));

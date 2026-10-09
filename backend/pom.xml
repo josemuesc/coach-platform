@@ -18,9 +18,16 @@
     <properties>
         <java.version>21</java.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <springdoc.version>3.1.1</springdoc.version>
     </properties>
 
     <dependencies>
+        <!-- OpenAPI/Swagger UI: always on the classpath but only SERVED with app.openapi.enabled=true (the dev profile) -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
