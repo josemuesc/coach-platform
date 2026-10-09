@@ -14,6 +14,8 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `INVALID_CREDENTIALS` | 401 | Correo o contraseña incorrectos. |
 | `TOO_MANY_ATTEMPTS` | 429 | Demasiados intentos. Espera unos minutos e inténtalo de nuevo. |
 | `INVALID_INVITATION` | 400 | La invitación no es válida o ya venció. Pide al entrenador un enlace nuevo. |
+| `INVALID_RESET_LINK` | 400 | El enlace para cambiar la contraseña no es válido, ya se usó o venció. Pide al entrenador uno nuevo. (Misma respuesta en cualquiera de esos casos.) |
+| `INVALID_SESSION` | 401 | Tu sesión terminó porque la contraseña cambió. Inicia sesión de nuevo. |
 | `EMAIL_ALREADY_USED` | 409 | Ese correo ya tiene una cuenta en la plataforma. (Para un alumno menor se usa `GUARDIAN_EMAIL_IN_USE`.) |
 | `CONCURRENT_CHANGE` | 409 | Otra persona cambió esto al mismo tiempo. Vuelve a intentarlo. |
 
@@ -27,6 +29,7 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `GUARDIAN_EMAIL_IN_USE` | 409 | Ese correo es del representante y ya tiene un alumno con este entrenador. Un correo corresponde a una sola cuenta. (Aplica a un alumno menor, al crearlo, al cambiar el correo del representante o al aceptar la invitación si el representante ya tiene cuenta con otro entrenador. La respuesta lleva este texto en `details.message`.) |
 | `EMAIL_LOCKED` | 409 | El correo no se puede cambiar porque el alumno ya aceptó la invitación. |
 | `STUDENT_ALREADY_HAS_ACCOUNT` | 409 | El alumno ya tiene su cuenta creada. |
+| `STUDENT_HAS_NO_ACCOUNT` | 409 | El alumno todavía no aceptó la invitación, así que no hay contraseña que restablecer. Reenvía la invitación. |
 | `EMAIL_REQUIRED` | 422 | Un alumno mayor de edad necesita su propio correo (es su usuario de acceso). |
 | `ACCOUNT_SUSPENDED` | 403 | La cuenta está suspendida porque se revocó la autorización de tratamiento de datos. |
 | `CYCLE_NOT_FOUND` | 404 | No se encontró el ciclo. |

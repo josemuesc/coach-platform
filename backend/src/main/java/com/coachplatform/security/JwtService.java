@@ -28,11 +28,16 @@ public class JwtService {
     }
 
     public String issue(UUID userId, UUID coachId, UserRole role) {
+        return issue(userId, coachId, role, 0L);
+    }
+
+    public String issue(UUID userId, UUID coachId, UserRole role, long passwordEpoch) {
         Instant now = clock.instant();
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("coachId", coachId.toString())
                 .claim("role", role.name())
+                .claim("pwe", passwordEpoch)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expiration)))
                 .signWith(key)
@@ -47,7 +52,8 @@ public class JwtService {
             return Optional.of(new AuthPrincipal(
                     UUID.fromString(c.getSubject()),
                     UUID.fromString(c.get("coachId", String.class)),
-                    UserRole.valueOf(c.get("role", String.class))));
+                    UserRole.valueOf(c.get("role", String.class)),
+                    c.get("pwe") instanceof Number n ? n.longValue() : 0L));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

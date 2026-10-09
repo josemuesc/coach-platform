@@ -12,6 +12,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,10 +27,13 @@ import org.springframework.web.bind.annotation.RestController;
 class StudentController {
 
     private final StudentService students;
+    private final PasswordResetService passwordResets;
     private final String frontendUrl;
 
-    StudentController(StudentService students, @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl) {
+    StudentController(StudentService students, PasswordResetService passwordResets,
+                      @Value("${app.frontend-url:http://localhost:5173}") String frontendUrl) {
         this.students = students;
+        this.passwordResets = passwordResets;
         this.frontendUrl = frontendUrl.replaceAll("/+$", "");
     }
 
@@ -77,6 +81,27 @@ class StudentController {
     InviteResponse reissue(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id) {
         InvitationIssued issued = students.reissueInvitation(id, me.userId());
         return new InviteResponse(link(issued), issued.expiresAt());
+    }
+
+    record ResetLinkResponse(String resetUrl, Instant expiresAt) {
+        @Override
+        public String toString() {
+            return "ResetLinkResponse[expiresAt=" + expiresAt + ", resetUrl=<redacted>]";
+        }
+    }
+
+    /** One-time link to set a new password for the student's login (the guardian's for a minor). Shown once; hand it over in person. */
+    @PostMapping("/{id}/password-reset")
+    @ResponseStatus(HttpStatus.CREATED)
+    ResetLinkResponse issueReset(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id) {
+        var issued = passwordResets.issue(id, me.userId());
+        return new ResetLinkResponse(frontendUrl + "/reset/" + issued.token(), issued.expiresAt());
+    }
+
+    @DeleteMapping("/{id}/password-reset")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    void revokeReset(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id) {
+        passwordResets.revoke(id, me.userId());
     }
 
     private String link(InvitationIssued issued) {

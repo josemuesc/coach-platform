@@ -347,7 +347,7 @@ class ArchitectureTest {
         assertThat(classes.contain(com.coachplatform.students.StudentService.class)).isTrue();
         assertThat(classes.contain("com.coachplatform.scheduling.SchedulingService")).isTrue();
         assertThat(classes.contain(com.coachplatform.billing.api.CycleSessions.class)).isTrue();
-        assertThat(classes.stream().filter(c -> c.isAnnotatedWith(CrossTenantAccess.class)).count()).isEqualTo(2);
+        assertThat(classes.stream().filter(c -> c.isAnnotatedWith(CrossTenantAccess.class)).count()).isEqualTo(3);
     }
 
     // ---- helpers -------------------------------------------------------------------------------

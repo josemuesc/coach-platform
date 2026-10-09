@@ -6,6 +6,7 @@ import com.coachplatform.auth.AuthDtos.LoginRequest;
 import com.coachplatform.auth.AuthDtos.MeResponse;
 import com.coachplatform.auth.AuthDtos.RegisterCoachRequest;
 import com.coachplatform.security.AuthPrincipal;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,8 +34,8 @@ public class AuthController {
     }
 
     @PostMapping("/auth/login")
-    AuthResponse login(@Valid @RequestBody LoginRequest req) {
-        return auth.login(req);
+    AuthResponse login(@Valid @RequestBody LoginRequest req, HttpServletRequest http) {
+        return auth.login(req, http.getRemoteAddr());
     }
 
     @PostMapping("/auth/change-password")
@@ -44,6 +45,6 @@ public class AuthController {
 
     @GetMapping("/me")
     MeResponse me(@AuthenticationPrincipal AuthPrincipal me) {
-        return new MeResponse(me.userId(), me.coachId(), me.role().name());
+        return auth.me(me.userId(), me.coachId(), me.role());
     }
 }

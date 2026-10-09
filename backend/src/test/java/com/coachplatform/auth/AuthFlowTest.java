@@ -45,7 +45,7 @@ class AuthFlowTest {
                         .content(json("coach1@test.co", "password123")))
                 .andExpect(status().isConflict());
 
-        AuthResponse login = auth.login(new AuthDtos.LoginRequest("coach1@test.co", "password123"));
+        AuthResponse login = auth.login(new AuthDtos.LoginRequest("coach1@test.co", "password123"), "127.0.0.1");
         mvc.perform(get("/api/me").header("Authorization", "Bearer " + login.token()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("COACH"))
@@ -82,9 +82,9 @@ class AuthFlowTest {
                         .content("{\"currentPassword\":\"password123\",\"newPassword\":\"new-password-2\"}"))
                 .andExpect(status().isOk());
 
-        assertThat(auth.login(new AuthDtos.LoginRequest("c4@test.co", "new-password-2")).token()).isNotBlank();
+        assertThat(auth.login(new AuthDtos.LoginRequest("c4@test.co", "new-password-2"), "127.0.0.1").token()).isNotBlank();
         org.junit.jupiter.api.Assertions.assertThrows(org.springframework.security.authentication.BadCredentialsException.class,
-                () -> auth.login(new AuthDtos.LoginRequest("c4@test.co", "password123")));
+                () -> auth.login(new AuthDtos.LoginRequest("c4@test.co", "password123"), "127.0.0.1"));
     }
 
     @Test

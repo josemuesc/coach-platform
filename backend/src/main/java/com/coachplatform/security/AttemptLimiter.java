@@ -52,6 +52,11 @@ public final class AttemptLimiter {
         failures.remove(key);
     }
 
+    /** Forgets every key that starts with the prefix (e.g. all "email|ip" pairs of one email). */
+    public void resetWithPrefix(String prefix) {
+        failures.keySet().removeIf(k -> k.startsWith(prefix));
+    }
+
     /** Time until the oldest counted failure leaves the window (at least 1 second). */
     public Duration retryAfter(String key) {
         Deque<Instant> attempts = failures.get(key);

@@ -1,5 +1,7 @@
 package com.coachplatform.auth;
 
+import com.coachplatform.auth.api.PasswordChangeMethod;
+import com.coachplatform.common.ValidPassword;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -13,14 +15,14 @@ public final class AuthDtos {
     public record RegisterCoachRequest(
             @NotBlank @Size(max = 200) String name,
             @NotBlank @Email @Size(max = 320) String email,
-            @NotBlank @Size(min = 10, max = 72) String password) {
+            @ValidPassword String password) {
         @Override
         public String toString() {
             return "RegisterCoachRequest[email=" + email + ", password=<redacted>]";
         }
     }
 
-    public record LoginRequest(@NotBlank String email, @NotBlank String password) {
+    public record LoginRequest(@NotBlank @Size(max = 320) String email, @NotBlank @Size(max = 1000) String password) {
         @Override
         public String toString() {
             return "LoginRequest[email=" + email + ", password=<redacted>]";
@@ -29,7 +31,7 @@ public final class AuthDtos {
 
     public record ChangePasswordRequest(
             @NotBlank String currentPassword,
-            @NotBlank @Size(min = 10, max = 72) String newPassword) {
+            @ValidPassword String newPassword) {
         @Override
         public String toString() {
             return "ChangePasswordRequest[<redacted>]";
@@ -43,6 +45,12 @@ public final class AuthDtos {
         }
     }
 
-    public record MeResponse(UUID userId, UUID coachId, String role) {
+    /**
+     * @param passwordChangedAt when the password last changed (null = never: it is still the one set at registration/invitation)
+     * @param passwordChangedBy SELF, or COACH_LINK when it was set through a reset link the coach handed over (the frontend warns
+     *                          the student in that case); null if never changed
+     */
+    public record MeResponse(UUID userId, UUID coachId, String role, java.time.Instant passwordChangedAt,
+                             PasswordChangeMethod passwordChangedBy) {
     }
 }

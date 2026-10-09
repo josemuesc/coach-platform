@@ -2,6 +2,7 @@ package com.coachplatform.students;
 
 import com.coachplatform.students.api.InvitationAccepted;
 import com.coachplatform.students.api.InvitationPreview;
+import com.coachplatform.common.ValidPassword;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,7 +30,7 @@ class InvitationController {
         }
     }
 
-    record AcceptRequest(@NotBlank @Size(max = 100) String token, @NotBlank @Size(min = 10, max = 72) String password,
+    record AcceptRequest(@NotBlank @Size(max = 100) String token, @ValidPassword String password,
                          @NotNull Boolean acceptData, @Size(max = 30) String dataVersion,
                          @NotNull Boolean acceptWhatsapp, @Size(max = 30) String whatsappVersion) {
         @Override

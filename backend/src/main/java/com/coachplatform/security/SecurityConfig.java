@@ -33,6 +33,7 @@ public class SecurityConfig {
     static final String CONFIRM_QR_PATH = "/api/student/attendances/confirm-qr";
     public static final String INVITATION_PREVIEW_PATH = "/api/invitations/preview";
     public static final String INVITATION_ACCEPT_PATH = "/api/invitations/accept";
+    public static final String RESET_PASSWORD_PATH = "/api/auth/reset-password";
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter, RateLimitFilter rateLimitFilter,
@@ -47,7 +48,7 @@ public class SecurityConfig {
                         // this they would all be turned into a misleading 401. A direct call to /error still needs a token.
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/auth/register-coach", LOGIN_PATH,
-                                INVITATION_PREVIEW_PATH, INVITATION_ACCEPT_PATH).permitAll()
+                                INVITATION_PREVIEW_PATH, INVITATION_ACCEPT_PATH, RESET_PASSWORD_PATH).permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         // Open to the filter chain on purpose: springdoc registers these paths only with app.openapi.enabled=true,
                         // so in any other profile an anonymous call gets a plain 404 (nothing there), not a 401 that hints at them.
@@ -110,11 +111,38 @@ public class SecurityConfig {
         return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
     }
 
+    /** Failures of one email FROM one IP (key "email|ip"): a stranger cannot lock the owner out from another address. */
+    @Bean
+    @Qualifier("loginEmailIpLimiter")
+    AttemptLimiter loginEmailIpLimiter(Clock clock,
+                                       @Value("${app.security.login-email-ip.max-failures:5}") int max,
+                                       @Value("${app.security.window-minutes:15}") long windowMinutes) {
+        return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
+    }
+
+    /** Global ceiling per email (any IP) per hour: stops guessing spread over many addresses. */
     @Bean
     @Qualifier("loginEmailLimiter")
     AttemptLimiter loginEmailLimiter(Clock clock,
-                                     @Value("${app.security.login-email.max-failures:5}") int max,
-                                     @Value("${app.security.window-minutes:15}") long windowMinutes) {
+                                     @Value("${app.security.login-email.max-failures:50}") int max,
+                                     @Value("${app.security.login-email.window-minutes:60}") long windowMinutes) {
+        return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
+    }
+
+    /** Wrong current passwords on change-password (a stolen token must not be a free password oracle). */
+    @Bean
+    @Qualifier("changePasswordLimiter")
+    AttemptLimiter changePasswordLimiter(Clock clock,
+                                         @Value("${app.security.change-password.max-failures:5}") int max,
+                                         @Value("${app.security.window-minutes:15}") long windowMinutes) {
+        return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
+    }
+
+    @Bean
+    @Qualifier("resetPasswordIpLimiter")
+    AttemptLimiter resetPasswordIpLimiter(Clock clock,
+                                          @Value("${app.security.reset-password-ip.max-failures:10}") int max,
+                                          @Value("${app.security.window-minutes:15}") long windowMinutes) {
         return new AttemptLimiter(clock, max, Duration.ofMinutes(windowMinutes));
     }
 
@@ -129,12 +157,14 @@ public class SecurityConfig {
     @Bean
     RateLimitFilter rateLimitFilter(@Qualifier("loginIpLimiter") AttemptLimiter loginIp,
                                     @Qualifier("invitationIpLimiter") AttemptLimiter invitationIp,
-                                    @Qualifier("qrScanIpLimiter") AttemptLimiter qrScanIp) {
+                                    @Qualifier("qrScanIpLimiter") AttemptLimiter qrScanIp,
+                                    @Qualifier("resetPasswordIpLimiter") AttemptLimiter resetPasswordIp) {
         return new RateLimitFilter(Map.of(
                 LOGIN_PATH, loginIp,
                 INVITATION_PREVIEW_PATH, invitationIp,
                 INVITATION_ACCEPT_PATH, invitationIp,
-                CONFIRM_QR_PATH, qrScanIp));
+                CONFIRM_QR_PATH, qrScanIp,
+                RESET_PASSWORD_PATH, resetPasswordIp));
     }
 
     /** The filters belong to the security chain only; stop Spring Boot from also registering them in the servlet container. */

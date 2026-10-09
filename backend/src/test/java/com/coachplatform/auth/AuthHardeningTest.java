@@ -45,41 +45,68 @@ class AuthHardeningTest extends ApiIntegrationTest {
     }
 
     @Test
-    void fiveFailedLoginsForAnEmailBlockEvenTheCorrectPasswordUntilTheWindowPasses() throws Exception {
+    void fiveFailedLoginsFromOneIpBlockThatPairEvenWithTheCorrectPasswordUntilTheWindowPasses() throws Exception {
         String email = uniqueEmail("brute");
         registerCoach(email);
 
         for (int i = 0; i < 5; i++) {
-            attemptLogin(email, "wrong-password-" + i, "10.1.0." + i, 401);
+            attemptLogin(email, "wrong-password-" + i, "10.1.0.1", 401);
         }
-        attemptLogin(email, PASSWORD, "10.1.0.99", 429);
+        attemptLogin(email, PASSWORD, "10.1.0.1", 429);
 
         clock.advance(Duration.ofMinutes(16));
-        attemptLogin(email, PASSWORD, "10.1.0.99", 200);
+        attemptLogin(email, PASSWORD, "10.1.0.1", 200);
+    }
+
+    @Test
+    void aStrangerCannotLockTheOwnerOutFromAnotherAddress() throws Exception {
+        String email = uniqueEmail("victim");
+        registerCoach(email);
+
+        for (int i = 0; i < 5; i++) {
+            attemptLogin(email, "attacker-guess-" + i, "10.1.1.1", 401);
+        }
+        attemptLogin(email, "attacker-guess", "10.1.1.1", 429);               // the attacker's own address is blocked...
+        attemptLogin(email, PASSWORD, "10.1.1.2", 200);                       // ...the owner, from theirs, still gets in
+    }
+
+    @Test
+    void failuresSpreadOverManyAddressesHitTheGlobalHourlyCeilingOfTheEmail() throws Exception {
+        String email = uniqueEmail("spread");
+        registerCoach(email);
+
+        for (int i = 0; i < 50; i++) {
+            attemptLogin(email, "guess-" + i, "10.5." + (i / 200) + "." + (i % 200 + 1), 401);   // one failure per address
+        }
+        attemptLogin(email, PASSWORD, "10.5.9.9", 429);                       // a fresh address is blocked too: 50 per hour per email
+
+        clock.advance(Duration.ofMinutes(61));
+        attemptLogin(email, PASSWORD, "10.5.9.9", 200);
     }
 
     @Test
     void unknownEmailsAreThrottledTooSoExistenceIsNotRevealed() throws Exception {
         String email = uniqueEmail("ghost");
         for (int i = 0; i < 5; i++) {
-            attemptLogin(email, "whatever-pass", "10.2.0." + i, 401);
+            attemptLogin(email, "whatever-pass", "10.2.0.1", 401);
         }
-        attemptLogin(email, "whatever-pass", "10.2.0.99", 429);
+        attemptLogin(email, "whatever-pass", "10.2.0.1", 429);
+        attemptLogin(email, "whatever-pass", "10.2.0.2", 401);                // exactly like an existing email from a new address
     }
 
     @Test
-    void aSuccessfulLoginResetsTheEmailCounter() throws Exception {
+    void aSuccessfulLoginResetsTheCounterOfThatPair() throws Exception {
         String email = uniqueEmail("reset");
         registerCoach(email);
 
         for (int i = 0; i < 4; i++) {
-            attemptLogin(email, "wrong-password", "10.3.0." + i, 401);
+            attemptLogin(email, "wrong-password", "10.3.0.1", 401);
         }
-        attemptLogin(email, PASSWORD, "10.3.0.50", 200);
+        attemptLogin(email, PASSWORD, "10.3.0.1", 200);
         for (int i = 0; i < 4; i++) {
-            attemptLogin(email, "wrong-password", "10.3.0." + (60 + i), 401);
+            attemptLogin(email, "wrong-password", "10.3.0.1", 401);
         }
-        attemptLogin(email, PASSWORD, "10.3.0.99", 200);
+        attemptLogin(email, PASSWORD, "10.3.0.1", 200);
     }
 
     @Test
