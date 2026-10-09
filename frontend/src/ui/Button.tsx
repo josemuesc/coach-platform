@@ -1,12 +1,13 @@
 import type { ButtonHTMLAttributes } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'dangerGhost';
 
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-brand text-brand-contrast border-transparent',
   secondary: 'bg-white text-ink border-line',
   danger: 'bg-white text-red-ink border-red-ink',
   ghost: 'bg-transparent text-ink border-transparent underline',
+  dangerGhost: 'bg-transparent text-red-ink border-transparent underline',
 };
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {

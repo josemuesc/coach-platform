@@ -59,7 +59,7 @@ test('the fonts are served from our own origin', async ({ page }) => {
   expect(new Set(fonts)).toEqual(new Set([APP_ORIGIN]));
 });
 
-test.describe('overlays and the QR engines under the strict CSP (smoke page, end-to-end build only)', () => {
+test.describe('overlays and the QR decoding under the strict CSP (smoke page, end-to-end build only)', () => {
   test('the Dialog and the Sheet of the app (native <dialog>) open and close without a single policy violation', async ({ page }) => {
     await watch(page);
     await page.goto('/__smoke');
@@ -74,28 +74,11 @@ test.describe('overlays and the QR engines under the strict CSP (smoke page, end
     expect(await violations(page)).toEqual([]);
   });
 
-  test('FINDING: Radix Dialog injects a <style> element (react-remove-scroll) that style-src \'self\' refuses', async ({ page }) => {
-    await watch(page);
-    await page.goto('/__smoke');
-    await page.getByRole('button', { name: 'Abrir diálogo Radix' }).click();
-    await expect(page.getByRole('dialog', { name: 'Radix' })).toBeVisible();
-    expect((await violations(page)).filter((v) => v.startsWith('style-src'))).not.toEqual([]);
-  });
-
   test('jsQR in our own worker decodes the code with zero violations (what the strict CSP allows)', async ({ page }) => {
     await watch(page);
     await page.goto('/__smoke');
     await page.getByRole('button', { name: 'Decodificar con jsQR en worker propio' }).click();
     await expect(page.locator('#jsqr-result')).toHaveText('OK https://app.example.test/qr#t=abcDEF0123456789_-xyz');
     expect(await violations(page)).toEqual([]);
-  });
-
-  test('FINDING: qr-scanner, where the browser has no BarcodeDetector, builds its worker from a blob: URL, which worker-src \'self\' blocks', async ({ page }) => {
-    await watch(page);
-    await page.goto('/__smoke');
-    await page.getByRole('button', { name: 'Decodificar con qr-scanner' }).click();
-    await expect.poll(async () => (await violations(page)).length, { timeout: 15_000 }).toBeGreaterThan(0);
-    expect((await violations(page)).join(' ')).toMatch(/worker-src.*blob|script-src.*blob/);
-    await expect(page.locator('#qr-scanner-result')).not.toHaveText(/^OK/);
   });
 });

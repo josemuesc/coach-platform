@@ -50,3 +50,13 @@ export const UserIcon = () => (
     <path d="M4.5 20.5c.6-3.7 3.6-6 7.5-6s6.9 2.3 7.5 6" />
   </Icon>
 );
+export const CheckIcon = () => (
+  <Icon>
+    <path d="M5 12.5l4.5 4.5L19 7.5" />
+  </Icon>
+);
+export const CrossIcon = () => (
+  <Icon>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </Icon>
+);

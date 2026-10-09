@@ -27,12 +27,14 @@ export const routes: RouteObject[] = [
   {
     element: <RequireRole role="COACH" />,
     children: [
+      // full screen, no navigation bar: the coach shows the phone to the class
+      { path: '/coach/qr/:eventId', lazy: () => import('../features/coach/qr/QrPage').then((m) => ({ Component: m.QrPage })) },
       {
         path: '/coach',
         // each area is its own chunk: a student never downloads the coach's code
         lazy: () => import('./layouts/CoachLayout'),
         children: [
-          { index: true, element: <ComingSoon title="Hoy" /> },
+          { index: true, lazy: () => import('../features/coach/today/TodayPage').then((m) => ({ Component: m.TodayPage })) },
           { path: 'students', element: <ComingSoon title="Alumnos" /> },
           { path: 'agenda', element: <ComingSoon title="Agenda" /> },
           { path: 'settings', element: <ChangePasswordPage /> },

@@ -48,9 +48,14 @@ body {
   outline-offset: 2px;
 }
 
-/* a native <dialog> opened with showModal(): the page behind must not scroll */
-html:has(dialog[open]) {
+/* a native <dialog> opened with showModal(): the page behind must not scroll. Plain stylesheet rules (no injected <style>, no JS) so the strict
+   CSP is untouched; overscroll-behavior stops a drag past the dialog's own edge from chaining to the page (the iOS case). */
+html:has(dialog[open]),
+body:has(dialog[open]) {
   overflow: hidden;
+}
+dialog {
+  overscroll-behavior: contain;
 }
 
 @media (prefers-reduced-motion: reduce) {

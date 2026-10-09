@@ -11,7 +11,7 @@ interface Props {
 /**
  * Both overlays are the browser's own modal <dialog> (showModal): focus is trapped and returned, the page behind is inert, Esc closes,
  * and nothing injects a <style> element, which the strict CSP (style-src 'self') would refuse. Radix Dialog was tried first and does
- * inject one (react-remove-scroll): see features/dev/RadixEvidence.tsx and the FINDING test in e2e/security.spec.ts.
+ * inject one (react-remove-scroll), and was dropped.
  */
 function Modal({ open, onOpenChange, title, description, children, className }: Props & { className: string }) {
   const ref = useRef<HTMLDialogElement>(null);

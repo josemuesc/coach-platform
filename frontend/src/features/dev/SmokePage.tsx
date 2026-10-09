@@ -1,14 +1,11 @@
 import QRCode from 'qrcode';
-import QrScanner from 'qr-scanner';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../../ui/Button';
 import { Dialog, Sheet } from '../../ui/Overlays';
-import { RadixEvidence } from './RadixEvidence';
 
 /**
  * End-to-end build only (route /__smoke, absent from the normal build). It exercises, under the REAL strict CSP, the pieces that are
- * most likely to need it loosened: Radix Dialog / Sheet (inject <style>?), the qrcode drawing, and the two QR decoding engines in a
- * browser with no BarcodeDetector (what iOS Safari is).
+ * most likely to need it loosened: the native <dialog> overlays, the qrcode drawing and the QR decoding in our own worker (jsQR).
  */
 const PAYLOAD = 'https://app.example.test/qr#t=abcDEF0123456789_-xyz';
 
@@ -16,23 +13,11 @@ export function SmokePage() {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [dialog, setDialog] = useState(false);
   const [sheet, setSheet] = useState(false);
-  const [scanner, setScanner] = useState('');
   const [jsqr, setJsqr] = useState('');
 
   useEffect(() => {
     if (canvas.current) void QRCode.toCanvas(canvas.current, PAYLOAD, { width: 280, margin: 2 });
   }, []);
-
-  async function viaQrScanner() {
-    try {
-      // emulate a browser without BarcodeDetector (iOS Safari): qr-scanner must then decode in its own worker
-      (QrScanner as unknown as { _disableBarcodeDetector: boolean })._disableBarcodeDetector = true;
-      const result = await QrScanner.scanImage(canvas.current!, { returnDetailedScanResult: true });
-      setScanner(`OK ${result.data}`);
-    } catch (e) {
-      setScanner(`ERROR ${String(e)}`);
-    }
-  }
 
   function viaJsQr() {
     const c = canvas.current!;
@@ -60,10 +45,7 @@ export function SmokePage() {
       <Sheet open={sheet} onOpenChange={setSheet} title="Marcar asistencia">
         <Button onClick={() => setSheet(false)}>Listo</Button>
       </Sheet>
-      <RadixEvidence />
       <canvas ref={canvas} aria-label="Código QR de prueba" />
-      <Button onClick={() => void viaQrScanner()}>Decodificar con qr-scanner</Button>
-      <output id="qr-scanner-result">{scanner}</output>
       <Button onClick={viaJsQr}>Decodificar con jsQR en worker propio</Button>
       <output id="jsqr-result">{jsqr}</output>
     </main>

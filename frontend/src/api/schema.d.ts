@@ -818,6 +818,8 @@ export interface components {
             freeBlocks: components["schemas"]["SlotView"][];
         };
         AttendanceView: {
+            canCancel: boolean;
+            canMark: boolean;
             cancelReason?: string | null;
             /** Format: int32 */
             capacity: number;
@@ -854,10 +856,12 @@ export interface components {
         AttendeeView: {
             /** Format: uuid */
             attendanceId: string;
+            canMark: boolean;
             /** @enum {string|null} */
             confirmationMethod?: "QR" | "LATER" | null;
             /** Format: date-time */
             confirmedAt?: string | null;
+            minor: boolean;
             onlyMarkedByCoach: boolean;
             override: boolean;
             overrideReason?: string | null;
@@ -1060,6 +1064,7 @@ export interface components {
         };
         EventView: {
             attendees: components["schemas"]["AttendeeView"][];
+            canShowQr: boolean;
             /** Format: int32 */
             capacity: number;
             /** Format: date-time */
@@ -1072,6 +1077,8 @@ export interface components {
             modality: "PERSONALIZED" | "SEMI_PERSONALIZED";
             /** Format: int32 */
             occupied: number;
+            /** @enum {string} */
+            phase: "PAST" | "NOW" | "UPCOMING";
             /** Format: date-time */
             startsAt: string;
             /** @enum {string} */
@@ -1208,6 +1215,10 @@ export interface components {
             priceCop: number;
         };
         QrView: {
+            /** Format: date-time */
+            availableFrom: string;
+            /** Format: date-time */
+            availableUntil: string;
             /** Format: date-time */
             expiresAt: string;
             token: string;
