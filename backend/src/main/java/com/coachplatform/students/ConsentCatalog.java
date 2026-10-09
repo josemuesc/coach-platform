@@ -61,7 +61,7 @@ class ConsentCatalog {
     /** The text in force with its variables filled; every value is made inert before it enters the Markdown. */
     ConsentTextView view(ConsentType type, Map<String, String> values) {
         ConsentDocument d = documents.get(type);
-        return new ConsentTextView(type, d.version(), d.title(), ConsentTextRenderer.render(d.body(), values), ConsentRules.isRequired(type));
+        return new ConsentTextView(type, d.version(), d.title(), ConsentTextRenderer.render(d.body(), values), ConsentRules.isRequired(type), d.isDraft());
     }
 
     private static String read(Resource resource) {

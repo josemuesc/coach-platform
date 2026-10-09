@@ -68,7 +68,7 @@ public class InvitationService {
                     "CELULAR", phone == null ? "el numero de contacto registrado" : phone);
             List<ConsentTextView> texts = ConsentRules.offeredFor(audience).stream().map(t -> catalog.view(t, values)).toList();
             var brand = coaches.brand(coachId);
-            return new InvitationPreview(brand.brandName(), brand.primaryColor(), student.getFullName(), audience,
+            return new InvitationPreview(brand.brandName(), brand.primaryColor(), student.getFullName(), student.getEmail(), audience,
                     audience == Audience.GUARDIAN ? student.guardian().name() : null, texts);
         }));
     }

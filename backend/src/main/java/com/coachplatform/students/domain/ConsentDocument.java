@@ -56,6 +56,11 @@ public record ConsentDocument(ConsentType type, String version, Status status, S
                 Status.valueOf(status.toUpperCase(Locale.ROOT)), title, body, sha256Hex(text));
     }
 
+    /** True while the text may not be used with real students (the same test the production startup applies). */
+    public boolean isDraft() {
+        return !productionProblems().isEmpty();
+    }
+
     /** Why this text may NOT be used with real students (empty when it may). Checked at production startup. */
     public List<String> productionProblems() {
         List<String> problems = new java.util.ArrayList<>();

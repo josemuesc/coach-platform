@@ -29,6 +29,11 @@ class StudentProfileAndConsentTest extends ApiIntegrationTest {
         return mvc.perform(withToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(path), token).contentType(MediaType.APPLICATION_JSON).content(body));
     }
 
+    /** A public call: no Authorization header at all. */
+    private ResultActions anon(String path, String body) throws Exception {
+        return mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post(path).contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
     private ResultActions put(String path, String token, String body) throws Exception {
         return mvc.perform(withToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path), token).contentType(MediaType.APPLICATION_JSON).content(body));
     }
@@ -152,7 +157,7 @@ class StudentProfileAndConsentTest extends ApiIntegrationTest {
         post("/api/coach/students", coach, "{\"fullName\":\"Hijo 1\",\"birthDate\":\"2010-05-01\"," + guardian + "}").andExpect(status().isCreated());
         post("/api/coach/students", coach, "{\"fullName\":\"Hijo 2\",\"birthDate\":\"2011-05-01\"," + guardian + "}")
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GUARDIAN_EMAIL_IN_USE"))
-                .andExpect(jsonPath("$.details.message").value("Ese correo es del representante y ya tiene un alumno con este entrenador. Un correo corresponde a una sola cuenta."));
+                .andExpect(jsonPath("$.details.message").value("Este correo ya tiene una cuenta. Pide a tu entrenador que registre un correo distinto para cada alumno."));
         // changing a minor's guardian email to one that is already in use is the same error
         String other = uniqueEmail("otra");
         String json = json(post("/api/coach/students", coach, "{\"fullName\":\"Hijo 3\",\"birthDate\":\"2012-05-01\",\"guardian\":" + GUARDIAN.formatted(other) + "}")
@@ -442,5 +447,33 @@ class StudentProfileAndConsentTest extends ApiIntegrationTest {
                 .andExpect(status().isOk());
         put("/api/coach/settings", coach, "{" + base + "\"confirmationWindowHours\":1,\"qrOpenMinutesBefore\":0,\"qrCloseHoursAfterEnd\":0,\"gymConsentConfirmed\":false}")
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void thePreviewTellsWhichEmailTheAccountWillUseAndWhetherTheTextsAreDrafts() throws Exception {
+        String coach = registerCoach(uniqueEmail("coach"));
+        Created adult = adult(coach, "Laura");
+        Created minor = minor(coach, "Mateo");
+        var adultPreview = anon("/api/invitations/preview", "{\"token\":\"" + adult.inviteToken() + "\"}").andExpect(status().isOk()).andReturn();
+        assertThat(JsonPath.<String>read(json(adultPreview), "$.accountEmail")).isEqualTo(adult.email());
+        var minorPreview = anon("/api/invitations/preview", "{\"token\":\"" + minor.inviteToken() + "\"}").andExpect(status().isOk()).andReturn();
+        assertThat(JsonPath.<String>read(json(minorPreview), "$.accountEmail")).isEqualTo(minor.email());   // the guardian's
+        // the texts in the test environment are the drafts: the flag says so (the production profile refuses to start with them)
+        assertThat(JsonPath.<java.util.List<Boolean>>read(json(adultPreview), "$.consents[*].draft")).isNotEmpty().containsOnly(true);
+    }
+
+    @Test
+    void noOtherPublicAnswerCarriesTheAccountEmail() throws Exception {
+        String coach = registerCoach(uniqueEmail("coach"));
+        Created adult = adult(coach, "Laura");
+        String email = adult.email();
+        java.util.List<String> bodies = new java.util.ArrayList<>();
+        bodies.add(json(anon("/api/invitations/preview", "{\"token\":\"no-such-token\"}").andReturn()));
+        bodies.add(json(anon("/api/invitations/accept", ConsentFixtures.acceptJson("no-such-token", "Mi-clave-segura-1")).andReturn()));
+        bodies.add(json(anon("/api/invitations/accept", ConsentFixtures.acceptJson(adult.inviteToken(), "corta")).andReturn()));   // refused: password policy
+        bodies.add(json(anon("/api/auth/login", "{\"email\":\"" + email + "\",\"password\":\"Equivocada-123\"}").andReturn()));
+        bodies.add(json(anon("/api/auth/reset-password", "{\"token\":\"no-such-token\",\"newPassword\":\"Mi-clave-segura-1\"}").andReturn()));
+        bodies.add(json(anon("/api/auth/register-coach", "{\"name\":\"X\",\"email\":\"" + email + "\",\"password\":\"Mi-clave-segura-1\"}").andReturn()));
+        assertThat(bodies).allSatisfy(b -> assertThat(b.toLowerCase()).doesNotContain(email.toLowerCase()));
     }
 }

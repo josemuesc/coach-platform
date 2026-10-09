@@ -605,6 +605,9 @@
           "bodyMarkdown" : {
             "type" : "string"
           },
+          "draft" : {
+            "type" : "boolean"
+          },
           "required" : {
             "type" : "boolean"
           },
@@ -619,7 +622,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "bodyMarkdown", "required", "title", "type", "version" ],
+        "required" : [ "bodyMarkdown", "draft", "required", "title", "type", "version" ],
         "type" : "object"
       },
       "Cycle" : {
@@ -890,6 +893,9 @@
       },
       "InvitationPreview" : {
         "properties" : {
+          "accountEmail" : {
+            "type" : "string"
+          },
           "audience" : {
             "enum" : [ "ADULT", "GUARDIAN" ],
             "type" : "string"
@@ -913,7 +919,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "audience", "brandName", "consents", "studentName" ],
+        "required" : [ "accountEmail", "audience", "brandName", "consents", "studentName" ],
         "type" : "object"
       },
       "InviteResponse" : {

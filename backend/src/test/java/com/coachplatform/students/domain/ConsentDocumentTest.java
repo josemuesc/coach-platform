@@ -85,4 +85,12 @@ class ConsentDocumentTest {
     void allTheProblemsAreReportedTogether() {
         assertThat(ConsentDocument.parse(file("DATA_GUARDIAN", "borrador-1", "DRAFT", "t", "[X]")).productionProblems()).hasSize(3);
     }
+
+    @Test
+    void isDraftIsExactlyWhatTheProductionStartupWouldRefuse() {
+        assertThat(ConsentDocument.parse(CLEAN).isDraft()).isFalse();
+        assertThat(ConsentDocument.parse(file("DATA_ADULT", "2026-11-v1", "DRAFT", "t", "texto")).isDraft()).isTrue();
+        assertThat(ConsentDocument.parse(file("WHATSAPP", "borrador-1", "FINAL", "t", "texto")).isDraft()).isTrue();
+        assertThat(ConsentDocument.parse(file("DATA_ADULT", "v1", "FINAL", "t", "Responsable: [NOMBRE]")).isDraft()).isTrue();
+    }
 }
