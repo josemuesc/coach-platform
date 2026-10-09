@@ -1,6 +1,7 @@
 package com.coachplatform.students;
 
 import com.coachplatform.auth.AuthService;
+import com.coachplatform.common.ApiException;
 import com.coachplatform.coach.CoachService;
 import com.coachplatform.students.api.InvitationAccepted;
 import com.coachplatform.students.api.Audience;
@@ -90,7 +91,16 @@ public class InvitationService {
             List<ConsentGrant> grants = consentRules.grants(audienceOf(student), catalog.offers(), acceptData, dataVersion,
                     acceptWhatsapp, whatsappVersion, student.guardian());
             grants.forEach(g -> ConsentRules.requireMayRegister(g.type(), ConsentRules.Channel.INVITATION, true));
-            UUID userId = auth.createStudentAccount(coachId, student.getEmail(), password);
+            UUID userId;
+            try {
+                userId = auth.createStudentAccount(coachId, student.getEmail(), password);
+            } catch (ApiException e) {
+                // the guardian already has an account (e.g. with another coach): say so in terms the coach understands
+                if ("EMAIL_ALREADY_USED".equals(e.code()) && audienceOf(student) == Audience.GUARDIAN) {
+                    throw new GuardianEmailInUseException();
+                }
+                throw e;
+            }
             student.linkAccount(userId);
             Instant now = clock.instant();
             for (ConsentGrant grant : grants) {

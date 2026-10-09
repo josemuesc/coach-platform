@@ -144,18 +144,33 @@ class StudentProfileAndConsentTest extends ApiIntegrationTest {
     }
 
     @Test
-    void aGuardianWithTwoMinorsOfTheSameCoachHitsTheEmailRuleAtCreationTime() throws Exception {
+    void aGuardianWithTwoMinorsOfTheSameCoachGetsAClearErrorAtCreationTime() throws Exception {
         // KNOWN LIMITATION (documented in CLAUDE.md): the guardian's email is the login of each minor and is unique per coach
         String coach = registerCoach(uniqueEmail("coach"));
         String sharedEmail = uniqueEmail("madre");
         String guardian = "\"guardian\":" + GUARDIAN.formatted(sharedEmail);
         post("/api/coach/students", coach, "{\"fullName\":\"Hijo 1\",\"birthDate\":\"2010-05-01\"," + guardian + "}").andExpect(status().isCreated());
         post("/api/coach/students", coach, "{\"fullName\":\"Hijo 2\",\"birthDate\":\"2011-05-01\"," + guardian + "}")
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GUARDIAN_EMAIL_IN_USE"))
+                .andExpect(jsonPath("$.details.message").value("Ese correo es del representante y ya tiene un alumno con este entrenador. Un correo corresponde a una sola cuenta."));
+        // changing a minor's guardian email to one that is already in use is the same error
+        String other = uniqueEmail("otra");
+        String json = json(post("/api/coach/students", coach, "{\"fullName\":\"Hijo 3\",\"birthDate\":\"2012-05-01\",\"guardian\":" + GUARDIAN.formatted(other) + "}")
+                .andExpect(status().isCreated()).andReturn());
+        put("/api/coach/students/" + JsonPath.<String>read(json, "$.student.id"), coach, "{\"data\":{\"fullName\":\"Hijo 3\",\"birthDate\":\"2012-05-01\",\"guardian\":"
+                + GUARDIAN.formatted(sharedEmail) + "}}").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GUARDIAN_EMAIL_IN_USE"));
+    }
+
+    @Test
+    void anAdultWithARepeatedEmailKeepsTheGenericError() throws Exception {
+        String coach = registerCoach(uniqueEmail("coach"));
+        Created ana = adult(coach, "Ana");
+        post("/api/coach/students", coach, "{\"fullName\":\"Otra Ana\",\"email\":\"" + ana.email() + "\",\"birthDate\":\"1990-05-01\"}")
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("STUDENT_EMAIL_EXISTS"));
     }
 
     @Test
-    void aGuardianAlreadyHoldingAnAccountWithAnotherCoachFailsWhenAcceptingTheInvitationWithoutConsumingIt() throws Exception {
+    void aGuardianAlreadyHoldingAnAccountWithAnotherCoachGetsTheClearErrorWhenAcceptingWithoutConsumingTheInvitation() throws Exception {
         String a = registerCoach(uniqueEmail("coach-a"));
         String b = registerCoach(uniqueEmail("coach-b"));
         String sharedEmail = uniqueEmail("madre");
@@ -165,7 +180,7 @@ class StudentProfileAndConsentTest extends ApiIntegrationTest {
         accept(new Created(JsonPath.read(jsonA, "$.student.id"), tokenFromInviteUrl(JsonPath.read(jsonA, "$.inviteUrl")), sharedEmail), true, false)
                 .andExpect(status().isOk());
         accept(new Created(JsonPath.read(jsonB, "$.student.id"), tokenFromInviteUrl(JsonPath.read(jsonB, "$.inviteUrl")), sharedEmail), true, false)
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EMAIL_ALREADY_USED"));
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GUARDIAN_EMAIL_IN_USE"));
     }
 
     // ================================================================= the invitation: preview and acceptance

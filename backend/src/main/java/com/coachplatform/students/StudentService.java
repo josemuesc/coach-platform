@@ -59,7 +59,7 @@ public class StudentService {
         guardianRules.requireGuardianData(birthDate, guardian);
         String email = loginEmail(birthDate, input.email(), guardian);
         if (students.existsByEmail(email)) {
-            throw new ApiException(HttpStatus.CONFLICT, "STUDENT_EMAIL_EXISTS");
+            throw emailExists(birthDate);
         }
         Student student = new Student(input.fullName().trim(), email, blankToNull(input.whatsappPhone()));
         student.updateProfile(blankToNull(input.goal()), birthDate, guardian);
@@ -108,7 +108,7 @@ public class StudentService {
                 throw new ApiException(HttpStatus.CONFLICT, "EMAIL_LOCKED");
             }
             if (students.existsByEmail(email)) {
-                throw new ApiException(HttpStatus.CONFLICT, "STUDENT_EMAIL_EXISTS");
+                throw emailExists(birthDate);
             }
         }
         student.update(input.fullName().trim(), email, blankToNull(input.whatsappPhone()));
@@ -148,6 +148,12 @@ public class StudentService {
         var expiresAt = clock.instant().plus(invitationTtl);
         invitations.save(new Invitation(student.getId(), InvitationToken.hash(token), expiresAt, createdByUserId));
         return new InvitationIssued(token, expiresAt);
+    }
+
+    /** A minor's login is the guardian's email, so the duplicate gets its own, clearer error. */
+    private ApiException emailExists(LocalDate birthDate) {
+        return guardianRules.isMinor(birthDate) ? new GuardianEmailInUseException()
+                : new ApiException(HttpStatus.CONFLICT, "STUDENT_EMAIL_EXISTS");
     }
 
     /** The login: the guardian's email while the student is under 18 (the guardian holds the account), else the student's own. */
