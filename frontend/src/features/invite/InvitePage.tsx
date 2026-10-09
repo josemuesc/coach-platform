@@ -100,10 +100,11 @@ export function InvitePage() {
       </Shell>
     );
   }
-  return <InviteForm token={token} data={preview.data} onReload={() => void preview.refetch()} />;
+  // key: a reload of the texts starts the form afresh (the person must read and accept the NEW text, not carry the old acceptance over)
+  return <InviteForm key={preview.dataUpdatedAt} token={token} data={preview.data} onReload={() => void preview.refetch()} reloading={preview.isFetching} />;
 }
 
-function InviteForm({ token, data, onReload }: { token: string; data: Preview; onReload: () => void }) {
+function InviteForm({ token, data, onReload, reloading }: { token: string; data: Preview; onReload: () => void; reloading: boolean }) {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const { register, handleSubmit, getValues, formState } = useForm<Values>({ defaultValues: { acceptData: false, acceptWhatsapp: false } });
@@ -215,11 +216,11 @@ function InviteForm({ token, data, onReload }: { token: string; data: Preview; o
 
         {error !== null && <Banner tone="red" role="alert">{messageFor(error)}</Banner>}
         {mismatch && (
-          <Button variant="secondary" onClick={onReload}>
+          <Button variant="secondary" loading={reloading} onClick={onReload}>
             Volver a cargar los textos
           </Button>
         )}
-        <Button type="submit" loading={formState.isSubmitting}>
+        <Button type="submit" loading={formState.isSubmitting} disabled={mismatch}>
           {guardian ? 'Aceptar y crear la cuenta' : 'Crear mi cuenta'}
         </Button>
       </form>
