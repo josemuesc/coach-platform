@@ -29,7 +29,9 @@ public class SchedulingRuleException extends RuntimeException {
         INVALID_QR,
         CONFIRMATION_WINDOW_CLOSED,
         QR_NOT_OPEN_YET,
-        QR_WINDOW_CLOSED
+        QR_WINDOW_CLOSED,
+        INVALID_START_TIME,
+        INVALID_BLOCK
     }
 
     private final Code code;

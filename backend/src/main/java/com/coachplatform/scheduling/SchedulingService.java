@@ -294,7 +294,7 @@ public class SchedulingService {
     }
 
     /** The one way a place is cancelled WITHOUT a replacement (one student's cancellation, one coach's, or each place of a bulk cancel). */
-    private void cancelPlain(SessionAttendance place, ClassSession lockedEvent, AttendanceStatus plain, boolean byStudent, UUID byUser,
+    void cancelPlain(SessionAttendance place, ClassSession lockedEvent, AttendanceStatus plain, boolean byStudent, UUID byUser,
                              String reason, Instant now) {
         place.cancel(plain, byUser, reason, now);
         attendances.saveAndFlush(place);
@@ -522,7 +522,8 @@ public class SchedulingService {
                 place.markOverride(byUser, overrideReason.trim());
             }
             SessionAttendance saved = attendances.saveAndFlush(place);
-            audit.record(saved, AuditAction.BOOK, null, AttendanceStatus.SCHEDULED, methodOf(byStudent), byUser, roleOf(byStudent), null);
+            audit.record(saved, AuditAction.BOOK, null, AttendanceStatus.SCHEDULED, methodOf(byStudent), byUser, roleOf(byStudent),
+                    d.overridden() ? overrideReason.trim() : null);   // an exception leaves its reason in the audit line too
             return saved;
         } catch (DataIntegrityViolationException e) {
             // The exclusion constraint / unique index caught what the checks above could not see.

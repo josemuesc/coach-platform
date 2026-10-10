@@ -213,6 +213,21 @@ public class BillingService {
                 .filter(c -> c.status() == CycleStatus.ACTIVE);
     }
 
+    /**
+     * Per plan, how many students have a CURRENT cycle bought with it (effective state: an overdue cycle does not count even if the job has
+     * not closed it yet). A plan nobody uses is absent.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, Integer> activeStudentsByPlan() {
+        Map<UUID, Integer> counts = new HashMap<>();
+        for (Cycle cycle : cycles.findByStatus(CycleStatus.ACTIVE)) {
+            if (toSummary(cycle).status() == CycleStatus.ACTIVE) {
+                counts.merge(cycle.getPlanId(), 1, Integer::sum);
+            }
+        }
+        return counts;
+    }
+
     @Transactional(readOnly = true)
     public List<CycleSummary> cycles(UUID studentId) {
         students.get(studentId);

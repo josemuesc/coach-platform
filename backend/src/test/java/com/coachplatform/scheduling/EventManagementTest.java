@@ -220,7 +220,7 @@ class EventManagementTest extends SchedulingApiTest {
     // ================================================================= blocks
 
     @Test
-    void aBlockListsTheEventsInsideItWithTheirAttendeesButCancelsNothing() throws Exception {
+    void aBlockReleasesTheClassesInsideItAndLeavesTheOnesOutsideAlone() throws Exception {
         var coach = newCoach(8);
         var ana = semi(coach, "Ana");
         var beto = semi(coach, "Beto");
@@ -229,13 +229,18 @@ class EventManagementTest extends SchedulingApiTest {
         studentBooked(beto, TEN);
         studentBooked(pilar, at(DAY, "15:00"));                                         // outside the block
 
-        var created = mvc.perform(withToken(post("/api/coach/availability/blocks"), coach.token()).contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"startsAt\":\"" + at(DAY, "09:00") + "\",\"endsAt\":\"" + at(DAY, "12:00") + "\",\"reason\":\"Festivo\"}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.affectedEvents.length()").value(1))
-                .andExpect(jsonPath("$.affectedEvents[0].id").value(event))
-                .andReturn();
-        assertThat(JsonPath.<List<String>>read(json(created), "$.affectedEvents[0].attendees[*].studentName")).containsExactlyInAnyOrder("Ana", "Beto");
-        assertThat(JsonPath.<List<String>>read(studentSessions(ana), "$[*].status")).containsExactly("SCHEDULED");   // nothing was cancelled
+        var preview = previewBlock(coach, DAY, "09:00", "12:00").andExpect(status().isOk())
+                .andExpect(jsonPath("$.releasedCount").value(2)).andReturn();
+        assertThat(JsonPath.<List<String>>read(json(preview), "$.affected[*].studentName")).containsExactly("Ana", "Beto");
+        assertThat(JsonPath.<List<String>>read(studentSessions(ana), "$[*].status")).containsExactly("SCHEDULED");   // the preview changed nothing
+        List<String> ids = JsonPath.read(json(preview), "$.affected[*].attendanceId");
+
+        var created = createBlock(coach, DAY, "09:00", "12:00", "Festivo", ids).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.cancelled.length()").value(2)).andExpect(jsonPath("$.students.length()").value(2)).andReturn();
+        assertThat(JsonPath.<String>read(json(created), "$.cancelled[0].eventId")).isEqualTo(event);
+        assertThat(JsonPath.<List<String>>read(studentSessions(ana), "$[*].status")).containsExactly("CANCELLED_BY_COACH");
+        assertThat(JsonPath.<List<String>>read(studentSessions(ana), "$[*].cancelReason")).containsExactly("Bloqueo de agenda: Festivo");
+        assertThat(JsonPath.<List<String>>read(studentSessions(pilar), "$[*].status")).containsExactly("SCHEDULED");
+        assertThat(JsonPath.<List<?>>read(agenda(coach, DAY, DAY), "$.events[*].id")).hasSize(1);   // the emptied event was cancelled; Pilar's stays
     }
 }

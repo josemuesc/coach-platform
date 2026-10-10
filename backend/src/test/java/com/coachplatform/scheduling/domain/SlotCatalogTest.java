@@ -10,7 +10,10 @@ import com.coachplatform.scheduling.domain.SlotCatalog.StudentSlot;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import com.coachplatform.scheduling.domain.SchedulingRuleException.Code;
+import com.coachplatform.scheduling.domain.SlotCatalog.CoachSlot;
 import org.junit.jupiter.api.Test;
 
 class SlotCatalogTest {
@@ -92,5 +95,43 @@ class SlotCatalogTest {
     @Test
     void noSlotsAtAllWhenTheGridIsEmpty() {
         assertThat(SlotCatalog.forStudent(Modality.PERSONALIZED, 4, List.of(), List.of())).isEmpty();
+    }
+
+    // ----------------------------------------------------------------- the coach's view for one student
+
+    @Test
+    void theCoachSeesEverySlotAStudentCouldTakeAndTheOnesOnlyAnOverrideCouldTakeWithTheirRule() {
+        var full = event("2026-10-13T09:00", Modality.SEMI_PERSONALIZED, 4, 4);
+        var otherModality = event("2026-10-13T10:00", Modality.PERSONALIZED, 1, 1);
+        var open = event("2026-10-13T11:00", Modality.SEMI_PERSONALIZED, 4, 1);
+
+        List<CoachSlot> slots = SlotCatalog.forCoach(Modality.SEMI_PERSONALIZED, 4, GRID, List.of(full, otherModality, open), Set.of());
+
+        assertThat(slots).extracting(s -> s.range().start()).containsExactly(local("2026-10-13T08:00"), local("2026-10-13T09:00"),
+                local("2026-10-13T10:00"), local("2026-10-13T11:00"));
+        assertThat(slots).extracting(CoachSlot::needsOverride).containsExactly(false, true, true, false);
+        assertThat(slots).extracting(CoachSlot::blockedBy).containsExactly(null, Code.EVENT_FULL, Code.MODALITY_MISMATCH, null);
+        assertThat(slots.get(0).capacity()).as("an empty block takes the default group capacity").isEqualTo(4);
+        assertThat(slots.get(3).occupied()).isEqualTo(1);
+    }
+
+    @Test
+    void aPersonalizedStudentFindsATakenPersonalizedBlockAsSlotTakenWhichAnOverrideCanTake() {
+        var taken = event("2026-10-13T09:00", Modality.PERSONALIZED, 1, 1);
+        List<CoachSlot> slots = SlotCatalog.forCoach(Modality.PERSONALIZED, 4, List.of(range("2026-10-13T09:00")), List.of(taken), Set.of());
+        assertThat(slots).singleElement().satisfies(s -> {
+            assertThat(s.needsOverride()).isTrue();
+            assertThat(s.blockedBy()).isEqualTo(Code.SLOT_TAKEN);
+        });
+    }
+
+    @Test
+    void anEventTheStudentIsAlreadyInAndOverlapsNoOverrideCanTakeAreNotListed() {
+        var mine = event("2026-10-13T09:00", Modality.SEMI_PERSONALIZED, 4, 2);
+        var longer = new EventInfo(UUID.randomUUID(), new Range(local("2026-10-13T10:00"), local("2026-10-13T11:30")), Modality.SEMI_PERSONALIZED, 4, 1);
+
+        List<CoachSlot> slots = SlotCatalog.forCoach(Modality.SEMI_PERSONALIZED, 4, GRID, List.of(mine, longer), Set.of(mine.id()));
+
+        assertThat(slots).extracting(s -> s.range().start()).containsExactly(local("2026-10-13T08:00"));
     }
 }

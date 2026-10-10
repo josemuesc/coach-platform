@@ -11,4 +11,8 @@ interface AvailabilityBlockRepository extends JpaRepository<AvailabilityBlock, U
 
     @Query("select b from AvailabilityBlock b where b.startsAt < :to and b.endsAt > :from order by b.startsAt")
     List<AvailabilityBlock> findOverlapping(@Param("from") Instant from, @Param("to") Instant to);
+
+    /** Blocks still running or yet to come (ending after {@code now}), soonest first. */
+    @Query("select b from AvailabilityBlock b where b.endsAt > :now order by b.startsAt")
+    List<AvailabilityBlock> findUpcoming(@Param("now") Instant now);
 }

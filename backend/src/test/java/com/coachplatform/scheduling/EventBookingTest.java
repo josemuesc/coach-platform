@@ -257,7 +257,7 @@ class EventBookingTest extends SchedulingApiTest {
     }
 
     @Test
-    void anOverrideNeverRelaxesTheQuotaTheCycleOrTheCalendar() throws Exception {
+    void anOverrideNeverRelaxesTheQuotaTheCycleOrABlock() throws Exception {
         var coach = newCoach(1);
         var ana = semi(coach, "Ana");        // a plan of ONE class
         var beto = semi(coach, "Beto");
@@ -266,7 +266,7 @@ class EventBookingTest extends SchedulingApiTest {
         changeCapacity(coach, eventIdAt(coach, ELEVEN), 2).andExpect(status().isOk());
 
         coachBooks(coach, ana, ELEVEN, true, "forzar").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("QUOTA_EXCEEDED"));
-        coachBooks(coach, beto, at(DAY, "21:00"), true, "forzar").andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("NOT_AVAILABLE"));
+        coachBooks(coach, beto, at(DAY, "21:00"), true, "forzar").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("QUOTA_EXCEEDED"));
         coachBooks(coach, beto, at("2026-11-09", "10:00"), true, "forzar").andExpect(status().isUnprocessableEntity());
     }
 

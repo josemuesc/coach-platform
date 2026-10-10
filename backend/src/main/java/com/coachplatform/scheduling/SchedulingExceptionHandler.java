@@ -19,7 +19,7 @@ class SchedulingExceptionHandler {
                  ALREADY_BOOKED, EVENT_ALREADY_STARTED, CAPACITY_BELOW_OCCUPANCY, CONFIRMATION_WINDOW_CLOSED, QR_NOT_OPEN_YET, QR_WINDOW_CLOSED -> HttpStatus.CONFLICT;
             case INVALID_QR -> HttpStatus.BAD_REQUEST;
             case CLASS_IN_PAST, TOO_SOON, OUTSIDE_CYCLE, NOT_AVAILABLE, BLOCKED, REASON_REQUIRED,
-                 CAPACITY_NOT_CONFIGURABLE, INVALID_CAPACITY -> HttpStatus.UNPROCESSABLE_ENTITY;
+                 CAPACITY_NOT_CONFIGURABLE, INVALID_CAPACITY, INVALID_START_TIME, INVALID_BLOCK -> HttpStatus.UNPROCESSABLE_ENTITY;
         };
         return ResponseEntity.status(status).body(Map.of("code", e.code().name(), "message", e.getMessage()));
     }

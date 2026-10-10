@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
@@ -179,5 +180,27 @@ public abstract class SchedulingApiTest extends ApiIntegrationTest {
 
     protected int classesUsed(CoachCtx c, StudentCtx s) throws Exception {
         return JsonPath.<Integer>read(activeCycle(c, s), "$.classesUsed");
+    }
+
+    // ---- blocks (local time; the server converts) ----
+    protected static String blockBody(String date, boolean allDay, String start, String end, String reason, List<String> affected) {
+        return "{\"localDate\":\"" + date + "\",\"allDay\":" + allDay
+                + (start == null ? "" : ",\"startTime\":\"" + start + "\"") + (end == null ? "" : ",\"endTime\":\"" + end + "\"")
+                + (reason == null ? "" : ",\"reason\":\"" + reason + "\"")
+                + (affected == null ? "" : ",\"affectedAttendanceIds\":[" + String.join(",", affected.stream().map(i -> "\"" + i + "\"").toList()) + "]") + "}";
+    }
+
+    protected ResultActions previewBlock(CoachCtx c, String date, String start, String end) throws Exception {
+        return mvc.perform(withToken(post("/api/coach/availability/blocks/preview"), c.token()).contentType(MediaType.APPLICATION_JSON)
+                .content(blockBody(date, start == null, start, end, "Reunión", null)));
+    }
+
+    protected ResultActions createBlock(CoachCtx c, String date, String start, String end, String reason, List<String> affected) throws Exception {
+        return mvc.perform(withToken(post("/api/coach/availability/blocks"), c.token()).contentType(MediaType.APPLICATION_JSON)
+                .content(blockBody(date, start == null, start, end, reason, affected)));
+    }
+
+    protected String upcomingBlocks(CoachCtx c) throws Exception {
+        return json(mvc.perform(withToken(get("/api/coach/availability/blocks/upcoming"), c.token())).andExpect(status().isOk()).andReturn());
     }
 }

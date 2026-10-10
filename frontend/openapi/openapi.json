@@ -51,6 +51,42 @@
         "required" : [ "active" ],
         "type" : "object"
       },
+      "AffectedClass" : {
+        "properties" : {
+          "attendanceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "eventId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "minor" : {
+            "type" : "boolean"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "studentName" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "attendanceId", "endsAt", "eventId", "minor", "modality", "startsAt", "studentId", "studentName" ],
+        "type" : "object"
+      },
       "AffectedStudent" : {
         "properties" : {
           "attendanceId" : {
@@ -66,6 +102,71 @@
           }
         },
         "required" : [ "attendanceId", "studentId" ],
+        "type" : "object"
+      },
+      "AgendaDay" : {
+        "properties" : {
+          "classCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "freeCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hasAvailability" : {
+            "type" : "boolean"
+          },
+          "items" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgendaRow"
+            },
+            "type" : "array"
+          },
+          "localDate" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "classCount", "freeCount", "hasAvailability", "items", "localDate" ],
+        "type" : "object"
+      },
+      "AgendaRow" : {
+        "properties" : {
+          "allDay" : {
+            "type" : "boolean"
+          },
+          "blockId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "blockReason" : {
+            "type" : [ "string", "null" ]
+          },
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "event" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/EventView"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "kind" : {
+            "enum" : [ "EVENT", "BLOCK", "FREE" ],
+            "type" : "string"
+          },
+          "localTime" : {
+            "type" : "string"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "allDay", "endsAt", "kind", "localTime", "startsAt" ],
         "type" : "object"
       },
       "AgendaView" : {
@@ -84,6 +185,22 @@
           }
         },
         "required" : [ "events", "freeBlocks" ],
+        "type" : "object"
+      },
+      "AgendaWeekView" : {
+        "properties" : {
+          "days" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgendaDay"
+            },
+            "type" : "array"
+          },
+          "weekStart" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "days", "weekStart" ],
         "type" : "object"
       },
       "AttendanceView" : {
@@ -270,40 +387,96 @@
       },
       "BlockCreated" : {
         "properties" : {
-          "affectedEvents" : {
+          "block" : {
+            "$ref" : "#/components/schemas/BlockSummary"
+          },
+          "cancelled" : {
             "items" : {
-              "$ref" : "#/components/schemas/EventView"
+              "$ref" : "#/components/schemas/AffectedClass"
             },
             "type" : "array"
           },
-          "block" : {
-            "$ref" : "#/components/schemas/BlockSummary"
+          "markedUntouched" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pendingUntouched" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "students" : {
+            "items" : {
+              "$ref" : "#/components/schemas/StudentImpact"
+            },
+            "type" : "array"
           }
         },
-        "required" : [ "affectedEvents", "block" ],
+        "required" : [ "block", "cancelled", "markedUntouched", "pendingUntouched", "students" ],
         "type" : "object"
       },
       "BlockInput" : {
         "properties" : {
-          "endsAt" : {
-            "format" : "date-time",
+          "affectedAttendanceIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "allDay" : {
+            "type" : "boolean"
+          },
+          "endTime" : {
+            "type" : "string"
+          },
+          "localDate" : {
+            "format" : "date",
             "type" : "string"
           },
           "reason" : {
-            "maxLength" : 200,
+            "maxLength" : 100,
             "minLength" : 0,
             "type" : "string"
           },
-          "startsAt" : {
-            "format" : "date-time",
+          "startTime" : {
             "type" : "string"
           }
         },
-        "required" : [ "endsAt", "startsAt" ],
+        "required" : [ "allDay", "localDate", "reason" ],
+        "type" : "object"
+      },
+      "BlockPreview" : {
+        "properties" : {
+          "affected" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AffectedClass"
+            },
+            "type" : "array"
+          },
+          "markedUntouched" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "pendingUntouched" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "releasedCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "affected", "markedUntouched", "pendingUntouched", "releasedCount" ],
         "type" : "object"
       },
       "BlockSummary" : {
         "properties" : {
+          "allDay" : {
+            "type" : "boolean"
+          },
+          "endTime" : {
+            "type" : [ "string", "null" ]
+          },
           "endsAt" : {
             "format" : "date-time",
             "type" : "string"
@@ -312,7 +485,13 @@
             "format" : "uuid",
             "type" : "string"
           },
+          "localDate" : {
+            "type" : "string"
+          },
           "reason" : {
+            "type" : [ "string", "null" ]
+          },
+          "startTime" : {
             "type" : [ "string", "null" ]
           },
           "startsAt" : {
@@ -320,7 +499,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "endsAt", "id", "startsAt" ],
+        "required" : [ "allDay", "endsAt", "id", "localDate", "startsAt" ],
         "type" : "object"
       },
       "BoardCounts" : {
@@ -416,6 +595,122 @@
           }
         },
         "required" : [ "startsAt" ],
+        "type" : "object"
+      },
+      "BookableStudent" : {
+        "properties" : {
+          "blockedReason" : {
+            "enum" : [ "NO_ACTIVE_CYCLE", "NO_CLASSES_LEFT" ],
+            "type" : [ "string", "null" ]
+          },
+          "canBook" : {
+            "type" : "boolean"
+          },
+          "classesAvailable" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "minor" : {
+            "type" : "boolean"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : [ "string", "null" ]
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "canBook", "classesAvailable", "fullName", "minor", "studentId" ],
+        "type" : "object"
+      },
+      "BookingOptions" : {
+        "properties" : {
+          "blockedReason" : {
+            "enum" : [ "NO_ACTIVE_CYCLE", "NO_CLASSES_LEFT" ],
+            "type" : [ "string", "null" ]
+          },
+          "canBook" : {
+            "type" : "boolean"
+          },
+          "classesAvailable" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "cycleEndDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "dayWindows" : {
+            "items" : {
+              "$ref" : "#/components/schemas/WindowView"
+            },
+            "type" : "array"
+          },
+          "localDate" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : [ "string", "null" ]
+          },
+          "slots" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BookingSlot"
+            },
+            "type" : "array"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "canBook", "classesAvailable", "dayWindows", "localDate", "slots", "studentId" ],
+        "type" : "object"
+      },
+      "BookingSlot" : {
+        "properties" : {
+          "blockedBy" : {
+            "enum" : [ "MODALITY_MISMATCH", "EVENT_FULL", "SLOT_TAKEN" ],
+            "type" : [ "string", "null" ]
+          },
+          "capacity" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "eventId" : {
+            "format" : "uuid",
+            "type" : [ "string", "null" ]
+          },
+          "localTime" : {
+            "type" : "string"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "needsOverride" : {
+            "type" : "boolean"
+          },
+          "occupied" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "capacity", "endsAt", "localTime", "modality", "needsOverride", "occupied", "startsAt" ],
         "type" : "object"
       },
       "BrandView" : {
@@ -567,6 +862,8 @@
             "type" : "boolean"
           },
           "overrideReason" : {
+            "maxLength" : 200,
+            "minLength" : 0,
             "type" : "string"
           },
           "startsAt" : {
@@ -848,6 +1145,20 @@
           }
         },
         "required" : [ "classesIncluded", "classesLost", "classesRemaining", "classesUsed", "endDate", "id", "modality", "originalEndDate", "pendingMarks", "planId", "startDate", "status", "studentId" ],
+        "type" : "object"
+      },
+      "DayWindowInput" : {
+        "properties" : {
+          "end" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "start" : {
+            "minLength" : 1,
+            "type" : "string"
+          }
+        },
+        "required" : [ "end", "start" ],
         "type" : "object"
       },
       "EmergencyContactView" : {
@@ -1323,6 +1634,10 @@
           "active" : {
             "type" : "boolean"
           },
+          "activeStudents" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "classesIncluded" : {
             "format" : "int32",
             "type" : "integer"
@@ -1343,7 +1658,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "active", "classesIncluded", "id", "modality", "name", "priceCop" ],
+        "required" : [ "active", "activeStudents", "classesIncluded", "id", "modality", "name", "priceCop" ],
         "type" : "object"
       },
       "QrView" : {
@@ -1601,6 +1916,44 @@
           }
         },
         "required" : [ "anonymizationRequested", "consents", "studentId" ],
+        "type" : "object"
+      },
+      "StudentImpact" : {
+        "properties" : {
+          "atRisk" : {
+            "type" : "boolean"
+          },
+          "canExtend" : {
+            "type" : "boolean"
+          },
+          "classesLeftToSchedule" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "cycleEndDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "freeSlotsBeforeDeadline" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "minor" : {
+            "type" : "boolean"
+          },
+          "releasedClasses" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "studentName" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "atRisk", "canExtend", "classesLeftToSchedule", "freeSlotsBeforeDeadline", "minor", "releasedClasses", "studentId", "studentName" ],
         "type" : "object"
       },
       "StudentInput" : {
@@ -2110,6 +2463,33 @@
         "tags" : [ "scheduling-controller" ]
       }
     },
+    "/api/coach/agenda/week" : {
+      "get" : {
+        "operationId" : "agendaWeek",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "date",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgendaWeekView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
     "/api/coach/attendances/pending" : {
       "get" : {
         "operationId" : "pending",
@@ -2352,6 +2732,55 @@
         "tags" : [ "scheduling-controller" ]
       }
     },
+    "/api/coach/availability/blocks/preview" : {
+      "post" : {
+        "operationId" : "previewBlock",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BlockInput"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BlockPreview"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/availability/blocks/upcoming" : {
+      "get" : {
+        "operationId" : "upcomingBlocks",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/BlockSummary"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
     "/api/coach/availability/blocks/{id}" : {
       "delete" : {
         "operationId" : "deleteBlock",
@@ -2367,6 +2796,49 @@
         "responses" : {
           "204" : {
             "description" : "No Content"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/availability/days/{dayOfWeek}" : {
+      "put" : {
+        "operationId" : "replaceDay",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "dayOfWeek",
+          "required" : true,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "items" : {
+                  "$ref" : "#/components/schemas/DayWindowInput"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/WindowView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
           }
         },
         "tags" : [ "scheduling-controller" ]
@@ -2391,6 +2863,27 @@
           }
         },
         "tags" : [ "billing-controller" ]
+      }
+    },
+    "/api/coach/booking/students" : {
+      "get" : {
+        "operationId" : "bookableStudents",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/BookableStudent"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
       }
     },
     "/api/coach/brand" : {
@@ -3206,6 +3699,41 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/CancelAttendancesResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
+      }
+    },
+    "/api/coach/students/{studentId}/booking-options" : {
+      "get" : {
+        "operationId" : "bookingOptions",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "studentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "date",
+          "required" : true,
+          "schema" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BookingOptions"
                 }
               }
             },

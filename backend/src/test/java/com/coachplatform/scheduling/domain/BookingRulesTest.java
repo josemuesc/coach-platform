@@ -246,7 +246,7 @@ class BookingRulesTest {
     }
 
     @Test
-    void anOverrideRelaxesOnlyModalityAndCapacityNeverTheCycleTheQuotaTheCalendarOrBlocks() {
+    void anOverrideRelaxesOnlyModalityCapacityAndTheWeeklyScheduleNeverTheCycleTheQuotaOrBlocks() {
         Override o = new Override("forzar");
         var full = List.of(event(Modality.SEMI_PERSONALIZED, 4, 4));
 
@@ -257,8 +257,63 @@ class BookingRulesTest {
         assertThat(codeOf(request(AT, noQuota, false, true, List.of(), full, o))).isEqualTo(Code.QUOTA_EXCEEDED);
 
         assertThat(codeOf(request("2026-11-09T10:00", cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(), List.of(), o))).isEqualTo(Code.OUTSIDE_CYCLE);
-        assertThat(codeOf(request("2026-10-13T10:30", cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(), List.of(), o))).isEqualTo(Code.NOT_AVAILABLE);
         assertThat(codeOf(request(AT, cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(range("2026-10-13T09:30")), full, o))).isEqualTo(Code.BLOCKED);
+        // a block also stops an off-schedule class
+        assertThat(codeOf(request("2026-10-13T21:00", cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(range("2026-10-13T20:30")), List.of(), o))).isEqualTo(Code.BLOCKED);
+    }
+
+    // ================================================================= off-schedule exception
+
+    @Test
+    void theCoachCanBookOutsideTheWeeklyScheduleOnAQuarterHourWithAReasonAndItIsFlagged() {
+        Override o = new Override("Reposición");
+        var semi = cycle(Modality.SEMI_PERSONALIZED);
+
+        Decision outside = decide(request("2026-10-13T21:00", semi, false, true, List.of(), List.of(), o));   // windows end at 20:00
+        assertThat(outside.action()).isEqualTo(Action.CREATE_EVENT);
+        assertThat(outside.overridden()).isTrue();
+        assertThat(decide(request("2026-10-13T10:30", semi, false, true, List.of(), List.of(), o)).overridden())
+                .as("inside a window but not on its slot grid").isTrue();
+        assertThat(decide(request("2026-10-13T10:00", semi, false, true, List.of(), List.of(), o)).overridden())
+                .as("a slot of the schedule needs no exception").isFalse();
+    }
+
+    @Test
+    void withoutAnOverrideATimeOutsideTheScheduleIsStillRefusedAndTheStudentNeverGetsTheException() {
+        assertThat(codeOf(request("2026-10-13T21:00", cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(), List.of(), null))).isEqualTo(Code.NOT_AVAILABLE);
+        assertThat(codeOf(student("2026-10-13T10:30"))).isEqualTo(Code.NOT_AVAILABLE);
+    }
+
+    @Test
+    void anOffScheduleClassMustStartOnAQuarterHourAndNeedsAReason() {
+        var semi = cycle(Modality.SEMI_PERSONALIZED);
+        assertThat(codeOf(request("2026-10-13T21:10", semi, false, true, List.of(), List.of(), new Override("x")))).isEqualTo(Code.INVALID_START_TIME);
+        assertThat(codeOf(request("2026-10-13T21:00", semi, false, true, List.of(), List.of(), new Override(" ")))).isEqualTo(Code.REASON_REQUIRED);
+    }
+
+    @Test
+    void anOffScheduleClassStillRespectsTheCycleTheQuotaThePastAndTheEventsAlreadyThere() {
+        Override o = new Override("Reposición");
+        assertThat(codeOf(request("2026-11-09T21:00", cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(), List.of(), o))).isEqualTo(Code.OUTSIDE_CYCLE);
+        assertThat(codeOf(request("2026-10-13T21:00", new CycleSnapshot(true, CYCLE_END, 8, 5, 3, Modality.SEMI_PERSONALIZED), false, true, List.of(), List.of(), o))).isEqualTo(Code.QUOTA_EXCEEDED);
+        assertThat(codeOf(request("2026-10-12T07:45", cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(), List.of(), o))).isEqualTo(Code.CLASS_IN_PAST);
+        var longer = new EventSnapshot(new Range(local("2026-10-13T21:00"), local("2026-10-13T22:30")), Modality.SEMI_PERSONALIZED, 4, 1, false);
+        assertThat(codeOf(request("2026-10-13T21:30", cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(), List.of(longer), o))).isEqualTo(Code.SLOT_TAKEN);
+    }
+
+    @Test
+    void anOffScheduleClassCanJoinAnEventThatAlreadyExistsThereAndItIsStillFlagged() {
+        var existing = new EventSnapshot(range("2026-10-13T21:00"), Modality.SEMI_PERSONALIZED, 4, 1, false);
+        Decision d = decide(request("2026-10-13T21:00", cycle(Modality.SEMI_PERSONALIZED), false, true, List.of(), List.of(existing), new Override("Reposición")));
+        assertThat(d.action()).isEqualTo(Action.JOIN_EVENT);
+        assertThat(d.overridden()).isTrue();
+    }
+
+    @Test
+    void classesAvailableIsIncludedMinusUsedMinusBooked() {
+        assertThat(BookingRules.classesAvailable(cycle(8, 3, 2))).isEqualTo(3);
+        assertThat(BookingRules.classesAvailable(cycle(8, 5, 3))).isZero();
+        assertThat(BookingRules.classesAvailable(cycle(8, 8, 1))).as("never negative").isZero();
     }
 
     // ================================================================= reschedule keeps the same modality rules

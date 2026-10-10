@@ -44,6 +44,7 @@ class SchedulingIsolationPostgresIT extends PostgresIntegrationTest {
     @Autowired PlanService plans;
     @Autowired BillingService billing;
     @Autowired AvailabilityService availability;
+    @Autowired BlockService blockService;
     @Autowired SchedulingService scheduling;
     @Autowired JdbcTemplate jdbc;
 
@@ -72,7 +73,7 @@ class SchedulingIsolationPostgresIT extends PostgresIntegrationTest {
             return student;
         });
         AttendanceView placeA = TenantContext.callAs(a, () -> scheduling.bookAsCoach(studentA, tenAm, userA, false, null));
-        TenantContext.runAs(a, () -> availability.createBlock(new BlockInput(tenAm.plus(1, ChronoUnit.DAYS), tenAm.plus(2, ChronoUnit.DAYS), "festivo"), userA));
+        TenantContext.runAs(a, () -> blockService.create(new BlockInput(tenAm.atZone(java.time.ZoneId.of("America/Bogota")).toLocalDate().plusDays(1), true, null, null, "festivo", java.util.List.of()), userA));
 
         TenantContext.runAs(b, () -> {
             assertThat(availability.weekly()).isEmpty();

@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import com.coachplatform.scheduling.domain.BlockRules;
 import com.coachplatform.scheduling.domain.BookingRules;
 import com.coachplatform.scheduling.domain.CancellationPolicy;
 import com.coachplatform.scheduling.domain.EventRules;
@@ -31,6 +32,11 @@ class SchedulingConfig {
     @Bean
     BookingRules bookingRules(Clock clock, SlotCalendar slots) {
         return new BookingRules(clock, slots);
+    }
+
+    @Bean
+    BlockRules blockRules(Clock clock) {
+        return new BlockRules(clock, BOGOTA);
     }
 
     @Bean

@@ -112,8 +112,7 @@ class SchedulingIsolationTest extends SchedulingApiTest {
         String anaPlace = attendanceId(anaBooked);
         String anaEvent = eventId(anaBooked);
         studentBooked(bruno, TEN);                                                       // the very same time at the other coach: fine
-        String blockA = JsonPath.read(json(mvc.perform(withToken(post("/api/coach/availability/blocks"), a.token()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"startsAt\":\"" + at("2026-10-13", "00:00") + "\",\"endsAt\":\"" + at("2026-10-14", "00:00") + "\"}"))
+        String blockA = JsonPath.read(json(createBlock(a, "2026-10-13", null, null, "Festivo", List.of())
                 .andExpect(status().isCreated()).andReturn()), "$.block.id");
 
         // B's agenda contains only B's event

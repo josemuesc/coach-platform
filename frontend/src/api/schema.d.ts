@@ -84,6 +84,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coach/agenda/week": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["agendaWeek"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/coach/attendances/pending": {
         parameters: {
             query?: never;
@@ -180,6 +196,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coach/availability/blocks/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["previewBlock"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/coach/availability/blocks/upcoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["upcomingBlocks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/coach/availability/blocks/{id}": {
         parameters: {
             query?: never;
@@ -196,6 +244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coach/availability/days/{dayOfWeek}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["replaceDay"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/coach/billing/overview": {
         parameters: {
             query?: never;
@@ -204,6 +268,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/coach/booking/students": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["bookableStudents"];
         put?: never;
         post?: never;
         delete?: never;
@@ -564,6 +644,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coach/students/{studentId}/booking-options": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["bookingOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/coach/students/{studentId}/cycles": {
         parameters: {
             query?: never;
@@ -854,6 +950,22 @@ export interface components {
         ActiveRequest: {
             active: boolean;
         };
+        AffectedClass: {
+            /** Format: uuid */
+            attendanceId: string;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: uuid */
+            eventId: string;
+            minor: boolean;
+            /** @enum {string} */
+            modality: "PERSONALIZED" | "SEMI_PERSONALIZED";
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: uuid */
+            studentId: string;
+            studentName: string;
+        };
         AffectedStudent: {
             /** Format: uuid */
             attendanceId: string;
@@ -861,9 +973,38 @@ export interface components {
             studentId: string;
             studentName?: string | null;
         };
+        AgendaDay: {
+            /** Format: int32 */
+            classCount: number;
+            /** Format: int32 */
+            freeCount: number;
+            hasAvailability: boolean;
+            items: components["schemas"]["AgendaRow"][];
+            /** Format: date */
+            localDate: string;
+        };
+        AgendaRow: {
+            allDay: boolean;
+            /** Format: uuid */
+            blockId?: string | null;
+            blockReason?: string | null;
+            /** Format: date-time */
+            endsAt: string;
+            event?: components["schemas"]["EventView"] | null;
+            /** @enum {string} */
+            kind: "EVENT" | "BLOCK" | "FREE";
+            localTime: string;
+            /** Format: date-time */
+            startsAt: string;
+        };
         AgendaView: {
             events: components["schemas"]["EventView"][];
             freeBlocks: components["schemas"]["SlotView"][];
+        };
+        AgendaWeekView: {
+            days: components["schemas"]["AgendaDay"][];
+            /** Format: date */
+            weekStart: string;
         };
         AttendanceView: {
             canCancel: boolean;
@@ -944,22 +1085,42 @@ export interface components {
             token: string;
         };
         BlockCreated: {
-            affectedEvents: components["schemas"]["EventView"][];
             block: components["schemas"]["BlockSummary"];
+            cancelled: components["schemas"]["AffectedClass"][];
+            /** Format: int32 */
+            markedUntouched: number;
+            /** Format: int32 */
+            pendingUntouched: number;
+            students: components["schemas"]["StudentImpact"][];
         };
         BlockInput: {
-            /** Format: date-time */
-            endsAt: string;
-            reason?: string;
-            /** Format: date-time */
-            startsAt: string;
+            affectedAttendanceIds?: string[];
+            allDay: boolean;
+            endTime?: string;
+            /** Format: date */
+            localDate: string;
+            reason: string;
+            startTime?: string;
+        };
+        BlockPreview: {
+            affected: components["schemas"]["AffectedClass"][];
+            /** Format: int32 */
+            markedUntouched: number;
+            /** Format: int32 */
+            pendingUntouched: number;
+            /** Format: int32 */
+            releasedCount: number;
         };
         BlockSummary: {
+            allDay: boolean;
+            endTime?: string | null;
             /** Format: date-time */
             endsAt: string;
             /** Format: uuid */
             id: string;
+            localDate: string;
             reason?: string | null;
+            startTime?: string | null;
             /** Format: date-time */
             startsAt: string;
         };
@@ -1001,6 +1162,54 @@ export interface components {
             studentId: string;
         };
         BookCommand: {
+            /** Format: date-time */
+            startsAt: string;
+        };
+        BookableStudent: {
+            /** @enum {string|null} */
+            blockedReason?: "NO_ACTIVE_CYCLE" | "NO_CLASSES_LEFT" | null;
+            canBook: boolean;
+            /** Format: int32 */
+            classesAvailable: number;
+            fullName: string;
+            minor: boolean;
+            /** @enum {string|null} */
+            modality?: "PERSONALIZED" | "SEMI_PERSONALIZED" | null;
+            /** Format: uuid */
+            studentId: string;
+        };
+        BookingOptions: {
+            /** @enum {string|null} */
+            blockedReason?: "NO_ACTIVE_CYCLE" | "NO_CLASSES_LEFT" | null;
+            canBook: boolean;
+            /** Format: int32 */
+            classesAvailable: number;
+            /** Format: date */
+            cycleEndDate?: string | null;
+            dayWindows: components["schemas"]["WindowView"][];
+            /** Format: date */
+            localDate: string;
+            /** @enum {string|null} */
+            modality?: "PERSONALIZED" | "SEMI_PERSONALIZED" | null;
+            slots: components["schemas"]["BookingSlot"][];
+            /** Format: uuid */
+            studentId: string;
+        };
+        BookingSlot: {
+            /** @enum {string|null} */
+            blockedBy?: "MODALITY_MISMATCH" | "EVENT_FULL" | "SLOT_TAKEN" | null;
+            /** Format: int32 */
+            capacity: number;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: uuid */
+            eventId?: string | null;
+            localTime: string;
+            /** @enum {string} */
+            modality: "PERSONALIZED" | "SEMI_PERSONALIZED";
+            needsOverride: boolean;
+            /** Format: int32 */
+            occupied: number;
             /** Format: date-time */
             startsAt: string;
         };
@@ -1157,6 +1366,10 @@ export interface components {
             status: "ACTIVE" | "COMPLETED" | "EXPIRED";
             /** Format: uuid */
             studentId: string;
+        };
+        DayWindowInput: {
+            end: string;
+            start: string;
         };
         EmergencyContactView: {
             name: string;
@@ -1333,6 +1546,8 @@ export interface components {
         PlanSummary: {
             active: boolean;
             /** Format: int32 */
+            activeStudents: number;
+            /** Format: int32 */
             classesIncluded: number;
             /** Format: uuid */
             id: string;
@@ -1434,6 +1649,22 @@ export interface components {
             consents: components["schemas"]["ConsentItemView"][];
             /** Format: uuid */
             studentId: string;
+        };
+        StudentImpact: {
+            atRisk: boolean;
+            canExtend: boolean;
+            /** Format: int32 */
+            classesLeftToSchedule: number;
+            /** Format: date */
+            cycleEndDate?: string | null;
+            /** Format: int32 */
+            freeSlotsBeforeDeadline: number;
+            minor: boolean;
+            /** Format: int32 */
+            releasedClasses: number;
+            /** Format: uuid */
+            studentId: string;
+            studentName: string;
         };
         StudentInput: {
             /** Format: date */
@@ -1685,6 +1916,28 @@ export interface operations {
             };
         };
     };
+    agendaWeek: {
+        parameters: {
+            query: {
+                date: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AgendaWeekView"];
+                };
+            };
+        };
+    };
     pending: {
         parameters: {
             query?: never;
@@ -1870,6 +2123,50 @@ export interface operations {
             };
         };
     };
+    previewBlock: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockInput"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockPreview"];
+                };
+            };
+        };
+    };
+    upcomingBlocks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BlockSummary"][];
+                };
+            };
+        };
+    };
     deleteBlock: {
         parameters: {
             query?: never;
@@ -1890,6 +2187,32 @@ export interface operations {
             };
         };
     };
+    replaceDay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                dayOfWeek: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DayWindowInput"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WindowView"][];
+                };
+            };
+        };
+    };
     overview: {
         parameters: {
             query?: never;
@@ -1906,6 +2229,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["StudentBillingOverview"][];
+                };
+            };
+        };
+    };
+    bookableStudents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BookableStudent"][];
                 };
             };
         };
@@ -2558,6 +2901,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["CancelAttendancesResult"];
+                };
+            };
+        };
+    };
+    bookingOptions: {
+        parameters: {
+            query: {
+                date: string;
+            };
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BookingOptions"];
                 };
             };
         };

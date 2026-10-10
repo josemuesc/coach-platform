@@ -4,6 +4,7 @@ import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.A
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.BLOCKED;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.CLASS_IN_PAST;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.EVENT_FULL;
+import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.INVALID_START_TIME;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.MODALITY_MISMATCH;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.NOT_AVAILABLE;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.NO_ACTIVE_CYCLE;
@@ -35,8 +36,8 @@ import java.util.List;
  *  event of the other modality-> MODALITY_MISMATCH
  *  anything overlapping that is not exactly this slot (e.g. after a duration change) -> SLOT_TAKEN
  * </pre>
- * Only the coach can override MODALITY_MISMATCH / EVENT_FULL / a taken personalized event, with a reason; the cycle,
- * deadline, quota, availability and blocks are never overridable.
+ * Only the coach can override MODALITY_MISMATCH / EVENT_FULL / a taken personalized event, and also a time OUTSIDE the weekly
+ * windows (any start on a quarter hour), with a reason; the cycle, deadline, quota and blocks are never overridable.
  */
 public final class BookingRules {
 
@@ -85,6 +86,11 @@ public final class BookingRules {
         return modality == Modality.PERSONALIZED ? 1 : defaultGroupCapacity;
     }
 
+    /** How many more classes the cycle can take: included minus used minus the places already booked (never below 0). */
+    public static int classesAvailable(CycleSnapshot cycle) {
+        return Math.max(0, cycle.classesIncluded() - cycle.classesUsed() - cycle.classesScheduled());
+    }
+
     public Decision validate(Request r) {
         Instant now = clock.instant();
         CycleSnapshot cycle = r.cycle();
@@ -107,17 +113,23 @@ public final class BookingRules {
             throw new SchedulingRuleException(OUTSIDE_CYCLE,
                     "The class must be on or before the cycle deadline (" + cycle.endDate() + ")");
         }
-        if (!slots.isSlotStart(r.startsAt(), r.windows(), r.duration())) {
-            throw new SchedulingRuleException(NOT_AVAILABLE, "That time is not one of the coach's available slots");
+        boolean outsideWindows = !slots.isSlotStart(r.startsAt(), r.windows(), r.duration());
+        if (outsideWindows) {
+            if (r.override() == null) {
+                throw new SchedulingRuleException(NOT_AVAILABLE, "That time is not one of the coach's available slots");
+            }
+            if (!slots.isQuarterHour(r.startsAt())) {
+                throw new SchedulingRuleException(INVALID_START_TIME, "The class must start on a quarter hour");
+            }
         }
         Range range = new Range(r.startsAt(), r.startsAt().plus(r.duration()));
         if (r.blocks().stream().anyMatch(range::overlaps)) {
             throw new SchedulingRuleException(BLOCKED, "The coach is not available at that time");
         }
 
-        Decision decision = placeInEvent(r, cycle, range);
+        Decision decision = placeInEvent(r, cycle, range, outsideWindows);
 
-        if (r.consumesQuota() && cycle.classesUsed() + cycle.classesScheduled() + 1 > cycle.classesIncluded()) {
+        if (r.consumesQuota() && classesAvailable(cycle) < 1) {
             throw new SchedulingRuleException(QUOTA_EXCEEDED,
                     "The cycle has no classes left to schedule (" + cycle.classesUsed() + " used, "
                             + cycle.classesScheduled() + " scheduled, " + cycle.classesIncluded() + " included)");
@@ -125,12 +137,12 @@ public final class BookingRules {
         return decision;
     }
 
-    private Decision placeInEvent(Request r, CycleSnapshot cycle, Range range) {
+    private Decision placeInEvent(Request r, CycleSnapshot cycle, Range range, boolean outsideWindows) {
         List<EventSnapshot> overlapping = r.overlappingEvents();
         Modality mine = cycle.modality();
 
         if (overlapping.isEmpty()) {
-            return new Decision(Action.CREATE_EVENT, range, mine, capacityForNewEvent(mine, r.defaultGroupCapacity()), false);
+            return new Decision(Action.CREATE_EVENT, range, mine, capacityForNewEvent(mine, r.defaultGroupCapacity()), outsideWindows);
         }
         // Something overlaps. Only an event with EXACTLY this range can be joined; any other overlap (two events, or one of
         // another length left over from before a duration change) just means the time is taken - not even an override helps.
@@ -154,7 +166,7 @@ public final class BookingRules {
             }
             return new Decision(Action.JOIN_EVENT, range, event.modality(), event.capacity(), true);
         }
-        return new Decision(Action.JOIN_EVENT, range, event.modality(), event.capacity(), false);
+        return new Decision(Action.JOIN_EVENT, range, event.modality(), event.capacity(), outsideWindows);
     }
 
     private static String describe(Code code, EventSnapshot event) {

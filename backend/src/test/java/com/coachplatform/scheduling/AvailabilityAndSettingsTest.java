@@ -55,8 +55,8 @@ class AvailabilityAndSettingsTest extends SchedulingApiTest {
         var coach = newCoach(8);
         var ana = personalized(coach, "Ana");
         String blockId = JsonPath.read(json(mvc.perform(withToken(post("/api/coach/availability/blocks"), coach.token()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"startsAt\":\"" + at("2026-10-12", "00:00") + "\",\"endsAt\":\"" + at("2026-10-13", "00:00") + "\",\"reason\":\"Festivo\"}"))
-                .andExpect(status().isCreated()).andExpect(jsonPath("$.affectedEvents.length()").value(0)).andReturn()), "$.block.id");
+                .content(blockBody("2026-10-12", true, null, null, "Festivo", List.of())))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.cancelled.length()").value(0)).andExpect(jsonPath("$.block.allDay").value(true)).andReturn()), "$.block.id");
 
         List<String> days = JsonPath.read(studentSlots(ana, "2026-10-12", "2026-10-13"), "$[*].localDate");
         assertThat(days).hasSize(14).containsOnly("2026-10-13");
@@ -64,8 +64,7 @@ class AvailabilityAndSettingsTest extends SchedulingApiTest {
 
         mvc.perform(withToken(delete("/api/coach/availability/blocks/" + blockId), coach.token())).andExpect(status().isNoContent());
         studentBooks(ana, at("2026-10-12", "10:00")).andExpect(status().isCreated());
-        mvc.perform(withToken(post("/api/coach/availability/blocks"), coach.token()).contentType(MediaType.APPLICATION_JSON)
-                .content("{\"startsAt\":\"" + at("2026-10-12", "12:00") + "\",\"endsAt\":\"" + at("2026-10-12", "09:00") + "\"}"))
+        createBlock(coach, "2026-10-12", "12:00", "09:00", "Reunión", List.of())
                 .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.code").value("INVALID_BLOCK"));
     }
 

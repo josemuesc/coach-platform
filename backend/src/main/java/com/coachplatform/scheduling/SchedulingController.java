@@ -1,9 +1,14 @@
 package com.coachplatform.scheduling;
 
 import com.coachplatform.scheduling.api.AgendaView;
+import com.coachplatform.scheduling.api.AgendaWeekView;
 import com.coachplatform.scheduling.api.AttendanceView;
 import com.coachplatform.scheduling.api.BlockCreated;
 import com.coachplatform.scheduling.api.BlockInput;
+import com.coachplatform.scheduling.api.BlockPreview;
+import com.coachplatform.scheduling.api.BookableStudent;
+import com.coachplatform.scheduling.api.BookingOptions;
+import com.coachplatform.scheduling.api.DayWindowInput;
 import com.coachplatform.scheduling.api.BlockSummary;
 import com.coachplatform.scheduling.api.CancelAttendancesCommand;
 import com.coachplatform.scheduling.api.CancelAttendancesResult;
@@ -44,10 +49,15 @@ class SchedulingController {
 
     private final SchedulingService scheduling;
     private final AvailabilityService availability;
+    private final BlockService blockService;
+    private final CoachAgendaService agenda;
 
-    SchedulingController(SchedulingService scheduling, AvailabilityService availability) {
+    SchedulingController(SchedulingService scheduling, AvailabilityService availability, BlockService blockService,
+                         CoachAgendaService agenda) {
         this.scheduling = scheduling;
         this.availability = availability;
+        this.blockService = blockService;
+        this.agenda = agenda;
     }
 
     // ---- availability ----
@@ -61,15 +71,32 @@ class SchedulingController {
         return availability.replaceWeekly(windows);
     }
 
+    /** Replaces the windows of one weekday (1 = Monday ... 7 = Sunday); the other days are left alone. */
+    @PutMapping("/availability/days/{dayOfWeek}")
+    List<WindowView> replaceDay(@PathVariable int dayOfWeek, @Valid @RequestBody List<@Valid DayWindowInput> windows) {
+        return availability.replaceDay(dayOfWeek, windows);
+    }
+
     @GetMapping("/availability/blocks")
     List<BlockSummary> blocks(@RequestParam Instant from, @RequestParam Instant to) {
         return availability.blocks(from, to);
     }
 
+    @GetMapping("/availability/blocks/upcoming")
+    List<BlockSummary> upcomingBlocks() {
+        return availability.upcomingBlocks();
+    }
+
+    /** What saving the block would do (the classes it would release); writes nothing. */
+    @PostMapping("/availability/blocks/preview")
+    BlockPreview previewBlock(@Valid @RequestBody BlockInput input) {
+        return blockService.preview(input);
+    }
+
     @PostMapping("/availability/blocks")
     @ResponseStatus(HttpStatus.CREATED)
     BlockCreated createBlock(@AuthenticationPrincipal AuthPrincipal me, @Valid @RequestBody BlockInput input) {
-        return availability.createBlock(input, me.userId());
+        return blockService.create(input, me.userId());
     }
 
     @DeleteMapping("/availability/blocks/{id}")
@@ -82,6 +109,21 @@ class SchedulingController {
     @GetMapping("/agenda")
     AgendaView agenda(@RequestParam LocalDate from, @RequestParam LocalDate to) {
         return scheduling.agenda(from, to);
+    }
+
+    @GetMapping("/agenda/week")
+    AgendaWeekView agendaWeek(@RequestParam LocalDate date) {
+        return agenda.week(date);
+    }
+
+    @GetMapping("/booking/students")
+    List<BookableStudent> bookableStudents() {
+        return agenda.bookableStudents();
+    }
+
+    @GetMapping("/students/{studentId}/booking-options")
+    BookingOptions bookingOptions(@PathVariable UUID studentId, @RequestParam LocalDate date) {
+        return agenda.bookingOptions(studentId, date);
     }
 
     @GetMapping("/attendances/pending")

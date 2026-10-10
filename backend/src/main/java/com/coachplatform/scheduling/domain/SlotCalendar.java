@@ -63,6 +63,12 @@ public final class SlotCalendar {
         return slots;
     }
 
+    /** True if the instant is exactly on a quarter hour of the local clock (the granularity of an off-schedule class). */
+    public boolean isQuarterHour(Instant instant) {
+        ZonedDateTime local = instant.atZone(zone);
+        return local.getMinute() % 15 == 0 && local.getSecond() == 0 && local.getNano() == 0;
+    }
+
     /** True if a class starting at {@code startsAt} is exactly one of the slots the windows produce. */
     public boolean isSlotStart(Instant startsAt, List<Window> windows, Duration duration) {
         ZonedDateTime local = startsAt.atZone(zone);

@@ -81,7 +81,9 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `INVALID_RANGE` | 422 | El rango de fechas no es válido. |
 | `INVALID_AVAILABILITY` | 422 | La disponibilidad enviada no es válida. |
 | `OVERLAPPING_AVAILABILITY` | 422 | Hay franjas de disponibilidad que se solapan. |
-| `INVALID_BLOCK` | 422 | El bloqueo no es válido. |
+| `INVALID_BLOCK` | 422 | El bloqueo no es válido: revisa la fecha y las horas (no puede haber terminado ya). |
+| `BLOCK_AFFECTED_CHANGED` | 409 | Las clases afectadas cambiaron mientras revisabas. No se guardó nada: revisa la lista nueva y confirma de nuevo. (La respuesta lleva la lista actual en `details.preview`: `affected`, `releasedCount`, `markedUntouched`, `pendingUntouched`.) |
+| `INVALID_START_TIME` | 422 | La clase fuera de tu horario debe empezar en una hora en punto, y cuarto, media o menos cuarto. |
 | `INVALID_QR` | 400 | El código no es válido o ya venció. Pide al entrenador que muestre el código actual. |
 | `QR_NOT_OPEN_YET` | 409 | El código aún no está disponible para esta clase. |
 | `QR_WINDOW_CLOSED` | 409 | Ya pasó el tiempo para usar el código de esta clase. |
