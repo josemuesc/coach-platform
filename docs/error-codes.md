@@ -34,7 +34,7 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `EMAIL_REQUIRED` | 422 | Un alumno mayor de edad necesita su propio correo (es su usuario de acceso). |
 | `ACCOUNT_SUSPENDED` | 403 | La cuenta está suspendida porque se revocó la autorización de tratamiento de datos. |
 | `CYCLE_NOT_FOUND` | 404 | No se encontró el ciclo. |
-| `ACTIVE_CYCLE_EXISTS` | 409 | El alumno ya tiene un ciclo activo. Podrás registrar el pago desde la fecha límite. |
+| `ACTIVE_CYCLE_EXISTS` | 409 | El alumno ya tiene un ciclo activo. Podrás registrar el pago desde la fecha límite o cuando use sus clases. |
 | `CYCLE_NOT_ACTIVE` | 409 | El ciclo ya no está activo. |
 | `INVALID_PAYMENT_DATE` | 422 | La fecha de pago no es válida (hasta 3 días atrás, nunca futura, y no anterior al fin del ciclo previo). |
 | `INVALID_EXTENSION` | 422 | La nueva fecha límite no es válida. |
@@ -102,3 +102,17 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `ADULT_CONSENT_NOT_ALLOWED` | 403 | Esta autorización la da el propio alumno mayor de edad desde su cuenta (no el entrenador, ni una cuenta que aún maneja el representante). La de WhatsApp la da el alumno o su representante, no el entrenador. |
 | `CONSENT_NOT_APPLICABLE` | 422 | Esa autorización no aplica a este alumno (la de mayor de edad no aplica a un menor, ni la del representante a un adulto). |
 | `ANONYMIZATION_PENDING` | 409 | La cuenta está marcada para anonimización: ya no se puede dar una autorización de datos. |
+
+## Forma de los `details` de los errores de renovación (probada en `BulkCancelTest`)
+
+Los textos `explanation` y `description` del servidor están en inglés y son solo para registros: el frontend usa SUS textos en español y decide qué mostrar por `code`.
+
+### `PENDING_SESSIONS_TO_MARK` (409) — se comprueba primero
+`details = { pendingSessions: PendingSession[] }`, con `PendingSession = { attendanceId, sessionId, studentId, startsAt, endsAt, eventModality }`. `eventModality` es `PERSONALIZED` o `SEMI_PERSONALIZED`. Salida: marcar esas clases (asistió / no vino) y repetir el pago.
+
+### `MODALITY_CONFLICT_ON_RENEWAL` (409) — solo al renovar el día de la fecha límite
+`details = { newPlanModality, conflictingAttendances: FutureAttendance[], explanation, options: Option[] }`, con `FutureAttendance = { attendanceId, sessionId, studentId, startsAt, endsAt, eventModality }` (clases aún sin empezar, en eventos de OTRA modalidad que el plan nuevo) y `Option = { code, description }`. Las salidas, en este orden:
+1. `CANCEL_WITHOUT_PENALTY`: cancelar esas clases como entrenador (nadie pierde una clase) con `POST /api/coach/students/{id}/attendances/cancel { attendanceIds, reason }` (todo o nada, una línea `CANCEL` de auditoría por clase) y repetir el pago.
+2. `OVERRIDE`: repetir el pago con `overrideModality: true` y `overrideReason` (obligatorio; sin él, `422 OVERRIDE_REASON_REQUIRED`): las clases pasan al ciclo nuevo y quedan marcadas como excepción.
+
+(La salida «marcar primero» pertenece al otro error. No existe «avisar a nadie»: los avisos llegan con la Fase 5.)

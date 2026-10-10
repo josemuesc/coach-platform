@@ -8,6 +8,7 @@ import com.coachplatform.billing.api.PlanInput;
 import com.coachplatform.billing.api.PlanSummary;
 import com.coachplatform.billing.api.RegisterPaymentCommand;
 import com.coachplatform.billing.api.StudentBillingOverview;
+import com.coachplatform.billing.api.StudentBoard;
 import com.coachplatform.security.AuthPrincipal;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -90,6 +91,12 @@ class BillingController {
     CycleSummary extend(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID cycleId,
                         @Valid @RequestBody ExtendCycleCommand cmd) {
         return billing.extendCycle(cycleId, cmd, me.userId());
+    }
+
+    /** The coach's student list with counts for its filters; see {@link StudentBoard}. */
+    @GetMapping("/students/board")
+    StudentBoard board() {
+        return billing.board();
     }
 
     @GetMapping("/billing/overview")

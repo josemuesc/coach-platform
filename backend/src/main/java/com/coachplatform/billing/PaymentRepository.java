@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     List<Payment> findByStudentIdOrderByPaidOnDescCreatedAtDesc(UUID studentId);
+
+    java.util.Optional<Payment> findFirstByStudentIdOrderByPaidOnDescCreatedAtDesc(UUID studentId);
 }

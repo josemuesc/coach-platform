@@ -10,6 +10,7 @@ import static com.coachplatform.billing.domain.CycleRuleException.Code.PENDING_S
 import static com.coachplatform.billing.domain.CycleRuleException.Code.REOPEN_NOT_ALLOWED;
 
 import com.coachplatform.billing.api.CycleStatus;
+import com.coachplatform.billing.api.PaymentBlockedBy;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -117,6 +118,70 @@ public final class CycleRules {
         LocalDate end = calendar.endDateFor(paidOn);
         CycleState created = new CycleState(paidOn, end, end, classesIncluded, 0, CycleStatus.ACTIVE, null);
         return new OpenCycleResult(created, previousUpdated);
+    }
+
+    /**
+     * When a payment can be registered, from the SAME conditions {@link #openCycle} enforces (a test walks both through the same
+     * states). Allowed when the student has no ACTIVE cycle (none yet, expired, or COMPLETED because every class was used - even
+     * before its deadline), or when the active one reached its last day and nothing is left unmarked.
+     *
+     * @param previous      the student's most recent cycle, as stored
+     * @param pendingMarks  classes of it that already started and are still unmarked
+     */
+    public PaymentWindow paymentWindow(Optional<CycleState> previous, int pendingMarks) {
+        LocalDate today = calendar.today();
+        LocalDate lowest = today.minusDays(MAX_BACKDATED_DAYS);
+        if (previous.isEmpty()) {
+            return PaymentWindow.open(lowest, today);
+        }
+        CycleState effective = evaluate(previous.get(), pendingMarks);
+        if (effective.isActive()) {
+            if (today.isBefore(effective.endDate())) {
+                return PaymentWindow.blocked(PaymentBlockedBy.ACTIVE_CYCLE, effective.endDate());
+            }
+            if (pendingMarks > 0) {
+                return PaymentWindow.blocked(PaymentBlockedBy.PENDING_SESSIONS, null);
+            }
+            return PaymentWindow.open(later(lowest, effective.endDate()), today);
+        }
+        LocalDate previousEnd = effective.status() == CycleStatus.COMPLETED ? effective.completedOn() : effective.endDate();
+        return PaymentWindow.open(later(lowest, previousEnd), today);
+    }
+
+    /** Dates the coach may pick for the deadline, from the SAME conditions {@link #extend} enforces. */
+    public ExtensionWindow extensionWindow(CycleState stored, int pendingMarks, boolean hasNewerCycle, int maxExtensionDays) {
+        CycleState effective = evaluate(stored, pendingMarks);
+        LocalDate from;
+        if (effective.status() == CycleStatus.COMPLETED) {
+            return ExtensionWindow.NONE;
+        } else if (effective.status() == CycleStatus.EXPIRED) {
+            if (hasNewerCycle) {
+                return ExtensionWindow.NONE;
+            }
+            from = later(effective.endDate().plusDays(1), calendar.today());
+        } else {
+            from = effective.endDate().plusDays(1);
+        }
+        LocalDate until = effective.originalEndDate().plusDays(maxExtensionDays);
+        return from.isAfter(until) ? ExtensionWindow.NONE : new ExtensionWindow(true, from, until);
+    }
+
+    private static LocalDate later(LocalDate a, LocalDate b) {
+        return a.isAfter(b) ? a : b;
+    }
+
+    public record PaymentWindow(boolean allowed, PaymentBlockedBy blockedBy, LocalDate opensOn, LocalDate paidOnMin, LocalDate paidOnMax) {
+        static PaymentWindow open(LocalDate min, LocalDate max) {
+            return new PaymentWindow(true, null, null, min, max);
+        }
+
+        static PaymentWindow blocked(PaymentBlockedBy by, LocalDate opensOn) {
+            return new PaymentWindow(false, by, opensOn, null, null);
+        }
+    }
+
+    public record ExtensionWindow(boolean allowed, LocalDate from, LocalDate until) {
+        public static final ExtensionWindow NONE = new ExtensionWindow(false, null, null);
     }
 
     /** Counts one class as seen. Closes the cycle as COMPLETED when the last class is used, even before the deadline. */

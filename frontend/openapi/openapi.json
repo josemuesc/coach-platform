@@ -323,6 +323,88 @@
         "required" : [ "endsAt", "id", "startsAt" ],
         "type" : "object"
       },
+      "BoardCounts" : {
+        "properties" : {
+          "all" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "expiring" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "minors" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "noPlan" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "all", "expiring", "minors", "noPlan" ],
+        "type" : "object"
+      },
+      "BoardRow" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "classesIncluded" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "classesRemaining" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "daysUntilEnd" : {
+            "format" : "int32",
+            "type" : [ "integer", "null" ]
+          },
+          "endDate" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "expiringBy" : {
+            "enum" : [ "DAYS", "CLASSES", "BOTH" ],
+            "type" : [ "string", "null" ]
+          },
+          "expiringSoon" : {
+            "type" : "boolean"
+          },
+          "fullName" : {
+            "type" : "string"
+          },
+          "hasAccount" : {
+            "type" : "boolean"
+          },
+          "minor" : {
+            "type" : "boolean"
+          },
+          "noPlan" : {
+            "type" : "boolean"
+          },
+          "pendingMarks" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "planModality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : [ "string", "null" ]
+          },
+          "status" : {
+            "enum" : [ "SUSPENDIDO", "SIN_ACTIVAR", "SIN_PLAN", "POR_VENCER", "AL_DIA" ],
+            "type" : "string"
+          },
+          "studentId" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "required" : [ "active", "expiringSoon", "fullName", "hasAccount", "minor", "noPlan", "pendingMarks", "status", "studentId" ],
+        "type" : "object"
+      },
       "BookCommand" : {
         "properties" : {
           "startsAt" : {
@@ -343,6 +425,38 @@
           }
         },
         "required" : [ "brandName" ],
+        "type" : "object"
+      },
+      "CancelAttendancesCommand" : {
+        "properties" : {
+          "attendanceIds" : {
+            "items" : {
+              "format" : "uuid",
+              "type" : "string"
+            },
+            "maxItems" : 50,
+            "minItems" : 0,
+            "type" : "array"
+          },
+          "reason" : {
+            "maxLength" : 500,
+            "minLength" : 0,
+            "type" : "string"
+          }
+        },
+        "required" : [ "attendanceIds", "reason" ],
+        "type" : "object"
+      },
+      "CancelAttendancesResult" : {
+        "properties" : {
+          "cancelled" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AttendanceView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "cancelled" ],
         "type" : "object"
       },
       "CancelEventCommand" : {
@@ -646,6 +760,35 @@
         "required" : [ "classes", "cycle", "otherEntries" ],
         "type" : "object"
       },
+      "CycleOverview" : {
+        "properties" : {
+          "cycle" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/CycleSummary"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "extension" : {
+            "$ref" : "#/components/schemas/ExtensionAvailability"
+          },
+          "lastPayment" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/PaymentSummary"
+            }, {
+              "type" : "null"
+            } ]
+          },
+          "payment" : {
+            "$ref" : "#/components/schemas/PaymentAvailability"
+          },
+          "planName" : {
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "extension", "payment" ],
+        "type" : "object"
+      },
       "CycleSummary" : {
         "properties" : {
           "classesIncluded" : {
@@ -783,6 +926,23 @@
           }
         },
         "required" : [ "newEndDate", "reason" ],
+        "type" : "object"
+      },
+      "ExtensionAvailability" : {
+        "properties" : {
+          "canExtendCycle" : {
+            "type" : "boolean"
+          },
+          "extendFrom" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "extendUntil" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "canExtendCycle" ],
         "type" : "object"
       },
       "GuardianInput" : {
@@ -1017,6 +1177,31 @@
           }
         },
         "required" : [ "brandName", "coachId", "role", "userId" ],
+        "type" : "object"
+      },
+      "PaymentAvailability" : {
+        "properties" : {
+          "blockedBy" : {
+            "enum" : [ "ACTIVE_CYCLE", "PENDING_SESSIONS" ],
+            "type" : [ "string", "null" ]
+          },
+          "canRegisterPayment" : {
+            "type" : "boolean"
+          },
+          "opensOn" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "paidOnMax" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          },
+          "paidOnMin" : {
+            "format" : "date",
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "canRegisterPayment" ],
         "type" : "object"
       },
       "PaymentRegistered" : {
@@ -1296,6 +1481,30 @@
         "required" : [ "endsAt", "localDate", "localTime", "startsAt" ],
         "type" : "object"
       },
+      "StudentAccountView" : {
+        "properties" : {
+          "active" : {
+            "type" : "boolean"
+          },
+          "hasAccount" : {
+            "type" : "boolean"
+          },
+          "openResetLinkUntil" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "passwordChangedAt" : {
+            "format" : "date-time",
+            "type" : [ "string", "null" ]
+          },
+          "passwordChangedBy" : {
+            "enum" : [ "SELF", "COACH_LINK" ],
+            "type" : [ "string", "null" ]
+          }
+        },
+        "required" : [ "active", "hasAccount" ],
+        "type" : "object"
+      },
       "StudentBillingOverview" : {
         "properties" : {
           "classesRemaining" : {
@@ -1323,6 +1532,21 @@
           }
         },
         "required" : [ "fullName", "pendingMarks", "status", "studentId" ],
+        "type" : "object"
+      },
+      "StudentBoard" : {
+        "properties" : {
+          "counts" : {
+            "$ref" : "#/components/schemas/BoardCounts"
+          },
+          "students" : {
+            "items" : {
+              "$ref" : "#/components/schemas/BoardRow"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "counts", "students" ],
         "type" : "object"
       },
       "StudentCancelCommand" : {
@@ -1389,6 +1613,30 @@
           }
         },
         "required" : [ "birthDate", "fullName" ],
+        "type" : "object"
+      },
+      "StudentProfile" : {
+        "properties" : {
+          "account" : {
+            "$ref" : "#/components/schemas/StudentAccountView"
+          },
+          "consents" : {
+            "$ref" : "#/components/schemas/StudentConsentsView"
+          },
+          "cycle" : {
+            "$ref" : "#/components/schemas/CycleOverview"
+          },
+          "student" : {
+            "$ref" : "#/components/schemas/StudentSummary"
+          },
+          "upcoming" : {
+            "items" : {
+              "$ref" : "#/components/schemas/UpcomingClass"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "account", "consents", "cycle", "student", "upcoming" ],
         "type" : "object"
       },
       "StudentSlotView" : {
@@ -1528,6 +1776,35 @@
           }
         },
         "required" : [ "token" ],
+        "type" : "object"
+      },
+      "UpcomingClass" : {
+        "properties" : {
+          "attendanceId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "endsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "eventId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "modality" : {
+            "enum" : [ "PERSONALIZED", "SEMI_PERSONALIZED" ],
+            "type" : "string"
+          },
+          "startsAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "today" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "attendanceId", "endsAt", "eventId", "modality", "startsAt", "today" ],
         "type" : "object"
       },
       "UpdateBrandRequest" : {
@@ -2551,6 +2828,24 @@
         "tags" : [ "student-controller" ]
       }
     },
+    "/api/coach/students/board" : {
+      "get" : {
+        "operationId" : "board",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentBoard"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "billing-controller" ]
+      }
+    },
     "/api/coach/students/{id}" : {
       "get" : {
         "operationId" : "get",
@@ -2792,6 +3087,33 @@
         "tags" : [ "student-controller" ]
       }
     },
+    "/api/coach/students/{id}/profile" : {
+      "get" : {
+        "operationId" : "profile",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StudentProfile"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "attendance-controller" ]
+      }
+    },
     "/api/coach/students/{id}/sheet" : {
       "get" : {
         "operationId" : "sheet",
@@ -2825,6 +3147,43 @@
           }
         },
         "tags" : [ "attendance-controller" ]
+      }
+    },
+    "/api/coach/students/{studentId}/attendances/cancel" : {
+      "post" : {
+        "operationId" : "cancelAttendances",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "studentId",
+          "required" : true,
+          "schema" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CancelAttendancesCommand"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CancelAttendancesResult"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [ "scheduling-controller" ]
       }
     },
     "/api/coach/students/{studentId}/cycles" : {

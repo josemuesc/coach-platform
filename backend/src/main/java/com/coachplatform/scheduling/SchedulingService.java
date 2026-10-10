@@ -16,6 +16,7 @@ import com.coachplatform.scheduling.api.AttendanceStatus;
 import com.coachplatform.scheduling.api.AttendanceView;
 import com.coachplatform.scheduling.api.AuditAction;
 import com.coachplatform.scheduling.api.AuditMethod;
+import com.coachplatform.scheduling.api.CancelAttendancesResult;
 import com.coachplatform.scheduling.api.CancelResult;
 import com.coachplatform.scheduling.api.EventCancelResult;
 import com.coachplatform.scheduling.api.EventStatus;
@@ -272,10 +273,7 @@ public class SchedulingService {
 
         if (newStartsAt == null) {
             ClassSession event = events.findByIdForUpdate(eventId).orElseThrow(EventNotFoundException::new);   // 3. the event
-            place.cancel(plain, byUser, reason, now);
-            attendances.saveAndFlush(place);
-            audit.record(place, AuditAction.CANCEL, AttendanceStatus.SCHEDULED, plain, methodOf(byStudent), byUser, roleOf(byStudent), reason);
-            cancelEventIfEmpty(event, byUser);
+            cancelPlain(place, event, plain, byStudent, byUser, reason, now);
             return new CancelResult(views.attendanceView(place, !byStudent), null);
         }
 
@@ -293,6 +291,48 @@ public class SchedulingService {
         cancelEventIfEmpty(old, byUser);    // flushed BEFORE a new event is created: the new one may overlap the old one's time
         SessionAttendance replacement = commit(placement, place.getStudentId(), cycle, place.getId(), byUser, byStudent, overrideReason);
         return new CancelResult(views.attendanceView(place, !byStudent), views.attendanceView(replacement, !byStudent));
+    }
+
+    /** The one way a place is cancelled WITHOUT a replacement (one student's cancellation, one coach's, or each place of a bulk cancel). */
+    private void cancelPlain(SessionAttendance place, ClassSession lockedEvent, AttendanceStatus plain, boolean byStudent, UUID byUser,
+                             String reason, Instant now) {
+        place.cancel(plain, byUser, reason, now);
+        attendances.saveAndFlush(place);
+        audit.record(place, AuditAction.CANCEL, AttendanceStatus.SCHEDULED, plain, methodOf(byStudent), byUser, roleOf(byStudent), reason);
+        cancelEventIfEmpty(lockedEvent, byUser);
+    }
+
+    /**
+     * The coach cancels several of ONE student's booked classes at once (the way out of a modality conflict on renewal). ALL OR NOTHING:
+     * if any place is not the student's, not found, or not SCHEDULED, nothing is cancelled. Same rules, same audit line (one CANCEL per
+     * class) and same lock order as the individual cancellation: the student first, then the events in ascending id.
+     */
+    public CancelAttendancesResult cancelManyAsCoach(UUID studentId, List<UUID> attendanceIds, String reason, UUID coachUserId) {
+        return inFreshTransactions(() -> doCancelManyAsCoach(studentId, attendanceIds, reason, coachUserId));
+    }
+
+    private CancelAttendancesResult doCancelManyAsCoach(UUID studentId, List<UUID> attendanceIds, String reason, UUID coachUserId) {
+        students.get(studentId);                                                        // 404 for a student of another tenant
+        students.lockForUpdate(studentId);                                              // 1. the student
+        List<UUID> ids = attendanceIds.stream().distinct().toList();
+        List<SessionAttendance> places = new ArrayList<>();
+        for (UUID id : ids) {
+            SessionAttendance place = attendances.findById(id).orElseThrow(AttendanceNotFoundException::new);   // read under the lock
+            if (!place.getStudentId().equals(studentId)) {
+                throw new AttendanceNotFoundException();                                // another student's place: reveal nothing
+            }
+            cancellation.requireCoachMayCancel(place.getStatus(), reason);
+            places.add(place);
+        }
+        Map<UUID, ClassSession> lockedEvents = new java.util.LinkedHashMap<>();
+        for (UUID eventId : new TreeSet<>(places.stream().map(SessionAttendance::getSessionId).toList())) {
+            lockedEvents.put(eventId, events.findByIdForUpdate(eventId).orElseThrow(EventNotFoundException::new));   // 3. the events, ascending id
+        }
+        Instant now = clock.instant();
+        for (SessionAttendance place : places) {
+            cancelPlain(place, lockedEvents.get(place.getSessionId()), AttendanceStatus.CANCELLED_BY_COACH, false, coachUserId, reason.trim(), now);
+        }
+        return new CancelAttendancesResult(views.attendanceViews(places, true));
     }
 
     /** An event with no live place left (booked or seen) is cancelled by the system; one with a marked class never is. */

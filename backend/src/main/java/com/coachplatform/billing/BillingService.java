@@ -1,6 +1,12 @@
 package com.coachplatform.billing;
 
+import com.coachplatform.billing.api.BoardCounts;
+import com.coachplatform.billing.api.BoardRow;
+import com.coachplatform.billing.api.CycleOverview;
 import com.coachplatform.billing.api.CycleSessions;
+import com.coachplatform.billing.api.ExtensionAvailability;
+import com.coachplatform.billing.api.PaymentAvailability;
+import com.coachplatform.billing.api.StudentBoard;
 import com.coachplatform.billing.api.FutureAttendance;
 import com.coachplatform.billing.api.CycleStatus;
 import com.coachplatform.billing.api.CycleSummary;
@@ -13,6 +19,8 @@ import com.coachplatform.billing.api.StudentBillingOverview;
 import com.coachplatform.billing.domain.CycleCalendar;
 import com.coachplatform.billing.domain.CycleRuleException;
 import com.coachplatform.billing.domain.CycleRules;
+import com.coachplatform.billing.domain.CycleRules.ExtensionWindow;
+import com.coachplatform.billing.domain.StudentBoardRules;
 import com.coachplatform.billing.domain.PaymentReferenceRules;
 import com.coachplatform.billing.domain.CycleState;
 import com.coachplatform.coach.CoachService;
@@ -21,6 +29,7 @@ import com.coachplatform.students.StudentService;
 import com.coachplatform.students.api.StudentSummary;
 import com.coachplatform.tenant.TenantContext;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -214,8 +223,7 @@ public class BillingService {
     public List<PaymentSummary> payments(UUID studentId) {
         students.get(studentId);
         return payments.findByStudentIdOrderByPaidOnDescCreatedAtDesc(studentId).stream()
-                .map(p -> new PaymentSummary(p.getId(), p.getStudentId(), p.getCycleId(), p.getAmountCop(),
-                        p.getMethod(), p.getPaidOn(), p.getRecordedBy(), p.getCreatedAt(), p.getReference()))
+                .map(BillingService::toPaymentSummary)
                 .toList();
     }
 
@@ -245,6 +253,65 @@ public class BillingService {
                     soon ? OverviewStatus.EXPIRING_SOON : OverviewStatus.ACTIVE, c.endDate(), c.classesRemaining(),
                     c.pendingMarks());
         }).toList();
+    }
+
+    /**
+     * The coach's board: every student with the state of their LATEST cycle, classified by {@link StudentBoardRules}, with the counts of
+     * the filter chips (active students only). By name; suspended students are listed last.
+     */
+    @Transactional(readOnly = true)
+    public StudentBoard board() {
+        Map<UUID, Cycle> latest = new HashMap<>();
+        for (Cycle cycle : cycles.findAllByOrderByStartDateDescCreatedAtDesc()) {
+            latest.putIfAbsent(cycle.getStudentId(), cycle);
+        }
+        var today = calendar.today();
+        BillingSettings settings = coaches.billingSettings(TenantContext.get());
+        List<BoardRow> listed = new ArrayList<>();
+        List<BoardRow> suspended = new ArrayList<>();
+        for (StudentSummary s : students.list()) {
+            Cycle cycle = latest.get(s.id());
+            CycleSummary summary = cycle == null ? null : toSummary(cycle);
+            var latestCycle = summary == null ? null
+                    : new StudentBoardRules.LatestCycle(summary.status(), summary.classesRemaining(), summary.endDate());
+            var c = StudentBoardRules.classify(s.active(), s.hasAccount(), latestCycle, today, settings.expiringSoonDays(),
+                    settings.expiringSoonClasses());
+            boolean hasPlan = summary != null && summary.status() != CycleStatus.EXPIRED;
+            BoardRow item = new BoardRow(s.id(), s.fullName(), s.minor(), s.hasAccount(), s.active(), c.status(), c.expiringSoon(),
+                    c.noPlan(), c.expiringBy(), hasPlan ? summary.modality() : null, hasPlan ? summary.classesIncluded() : null,
+                    hasPlan ? summary.classesRemaining() : null, hasPlan ? summary.endDate() : null, c.daysUntilEnd(),
+                    summary == null ? 0 : summary.pendingMarks());
+            (s.active() ? listed : suspended).add(item);
+        }
+        BoardCounts counts = new BoardCounts(listed.size(), (int) listed.stream().filter(BoardRow::expiringSoon).count(),
+                (int) listed.stream().filter(BoardRow::noPlan).count(), (int) listed.stream().filter(BoardRow::minor).count());
+        listed.addAll(suspended);
+        return new StudentBoard(counts, listed);
+    }
+
+    /**
+     * The cycle part of a student's profile: the latest cycle, its plan's name, the last payment and what the coach may do now (register a
+     * payment, extend or reopen), all derived from the rules the server applies when those requests arrive.
+     */
+    @Transactional(readOnly = true)
+    public CycleOverview cycleOverview(UUID studentId) {
+        students.get(studentId);   // 404 for a student of another tenant
+        Optional<Cycle> latest = cycles.findFirstByStudentIdOrderByStartDateDescCreatedAtDesc(studentId);
+        Optional<CycleState> stored = latest.map(c -> c.toState(calendar));
+        int pending = latest.map(c -> pendingMarks(c, c.toState(calendar))).orElse(0);
+        var pay = rules.paymentWindow(stored, pending);
+        var extension = latest.isEmpty() ? ExtensionWindow.NONE
+                : rules.extensionWindow(stored.orElseThrow(), pending, false, coaches.billingSettings(TenantContext.get()).maxExtensionDays());
+        return new CycleOverview(latest.map(this::toSummary).orElse(null),
+                latest.flatMap(c -> plans.findById(c.getPlanId())).map(Plan::getName).orElse(null),
+                payments.findFirstByStudentIdOrderByPaidOnDescCreatedAtDesc(studentId).map(BillingService::toPaymentSummary).orElse(null),
+                new PaymentAvailability(pay.allowed(), pay.blockedBy(), pay.opensOn(), pay.paidOnMin(), pay.paidOnMax()),
+                new ExtensionAvailability(extension.allowed(), extension.from(), extension.until()));
+    }
+
+    private static PaymentSummary toPaymentSummary(Payment p) {
+        return new PaymentSummary(p.getId(), p.getStudentId(), p.getCycleId(), p.getAmountCop(), p.getMethod(), p.getPaidOn(),
+                p.getRecordedBy(), p.getCreatedAt(), p.getReference());
     }
 
     /** Only an ACTIVE-as-stored cycle can have unmarked classes; closed cycles skip the query. */

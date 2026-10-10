@@ -157,6 +157,13 @@ public class AuthService {
                 user.getPasswordChangeMethod());
     }
 
+    /** When and how the login's password last changed (for the coach's view of a student's account). */
+    @Transactional(readOnly = true)
+    public com.coachplatform.auth.api.PasswordInfo passwordInfo(UUID userId) {
+        AppUser user = users.findById(userId).orElseThrow();
+        return new com.coachplatform.auth.api.PasswordInfo(user.getPasswordChangedAt(), user.getPasswordChangeMethod());
+    }
+
     /** True while a token issued under {@code epoch} is still current for the user (a deleted user is never current). */
     @Transactional(readOnly = true)
     public boolean sessionIsCurrent(UUID userId, long epoch) {

@@ -45,7 +45,7 @@ class SchedulingCycleSessions implements CycleSessions {
         Map<UUID, ClassSession> byId = eventsOf(pending);
         return pending.stream().map(a -> {
             ClassSession e = byId.get(a.getSessionId());
-            return new PendingSession(a.getId(), e.getId(), a.getStudentId(), e.getStartsAt(), e.getEndsAt());
+            return new PendingSession(a.getId(), e.getId(), a.getStudentId(), e.getStartsAt(), e.getEndsAt(), e.getModality());
         }).toList();
     }
 

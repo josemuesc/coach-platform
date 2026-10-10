@@ -5,6 +5,8 @@ import com.coachplatform.scheduling.api.AttendanceView;
 import com.coachplatform.scheduling.api.BlockCreated;
 import com.coachplatform.scheduling.api.BlockInput;
 import com.coachplatform.scheduling.api.BlockSummary;
+import com.coachplatform.scheduling.api.CancelAttendancesCommand;
+import com.coachplatform.scheduling.api.CancelAttendancesResult;
 import com.coachplatform.scheduling.api.CancelEventCommand;
 import com.coachplatform.scheduling.api.CancelResult;
 import com.coachplatform.scheduling.api.ChangeCapacityCommand;
@@ -103,6 +105,13 @@ class SchedulingController {
     @PostMapping("/attendances/{id}/mark")
     AttendanceView mark(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID id, @Valid @RequestBody MarkCommand cmd) {
         return scheduling.markAttendance(id, cmd.result(), me.userId());
+    }
+
+    /** All-or-nothing cancellation of several of one student's classes (e.g. before renewing into another modality). */
+    @PostMapping("/students/{studentId}/attendances/cancel")
+    CancelAttendancesResult cancelAttendances(@AuthenticationPrincipal AuthPrincipal me, @PathVariable UUID studentId,
+                                              @Valid @RequestBody CancelAttendancesCommand cmd) {
+        return scheduling.cancelManyAsCoach(studentId, cmd.attendanceIds(), cmd.reason(), me.userId());
     }
 
     @PostMapping("/attendances/{id}/cancel")

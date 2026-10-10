@@ -404,6 +404,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coach/students/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["board"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/coach/students/{id}": {
         parameters: {
             query?: never;
@@ -500,6 +516,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/coach/students/{id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["profile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/coach/students/{id}/sheet": {
         parameters: {
             query?: never;
@@ -510,6 +542,22 @@ export interface paths {
         get: operations["sheet"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/coach/students/{studentId}/attendances/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancelAttendances"];
         delete?: never;
         options?: never;
         head?: never;
@@ -915,6 +963,42 @@ export interface components {
             /** Format: date-time */
             startsAt: string;
         };
+        BoardCounts: {
+            /** Format: int32 */
+            all: number;
+            /** Format: int32 */
+            expiring: number;
+            /** Format: int32 */
+            minors: number;
+            /** Format: int32 */
+            noPlan: number;
+        };
+        BoardRow: {
+            active: boolean;
+            /** Format: int32 */
+            classesIncluded?: number | null;
+            /** Format: int32 */
+            classesRemaining?: number | null;
+            /** Format: int32 */
+            daysUntilEnd?: number | null;
+            /** Format: date */
+            endDate?: string | null;
+            /** @enum {string|null} */
+            expiringBy?: "DAYS" | "CLASSES" | "BOTH" | null;
+            expiringSoon: boolean;
+            fullName: string;
+            hasAccount: boolean;
+            minor: boolean;
+            noPlan: boolean;
+            /** Format: int32 */
+            pendingMarks: number;
+            /** @enum {string|null} */
+            planModality?: "PERSONALIZED" | "SEMI_PERSONALIZED" | null;
+            /** @enum {string} */
+            status: "SUSPENDIDO" | "SIN_ACTIVAR" | "SIN_PLAN" | "POR_VENCER" | "AL_DIA";
+            /** Format: uuid */
+            studentId: string;
+        };
         BookCommand: {
             /** Format: date-time */
             startsAt: string;
@@ -922,6 +1006,13 @@ export interface components {
         BrandView: {
             brandName: string;
             primaryColor?: string | null;
+        };
+        CancelAttendancesCommand: {
+            attendanceIds: string[];
+            reason: string;
+        };
+        CancelAttendancesResult: {
+            cancelled: components["schemas"]["AttendanceView"][];
         };
         CancelEventCommand: {
             reason: string;
@@ -1031,6 +1122,13 @@ export interface components {
             cycle: components["schemas"]["CycleSummary"];
             otherEntries: components["schemas"]["ClassRow"][];
         };
+        CycleOverview: {
+            cycle?: components["schemas"]["CycleSummary"] | null;
+            extension: components["schemas"]["ExtensionAvailability"];
+            lastPayment?: components["schemas"]["PaymentSummary"] | null;
+            payment: components["schemas"]["PaymentAvailability"];
+            planName?: string | null;
+        };
         CycleSummary: {
             /** Format: int32 */
             classesIncluded: number;
@@ -1089,6 +1187,13 @@ export interface components {
             /** Format: date */
             newEndDate: string;
             reason: string;
+        };
+        ExtensionAvailability: {
+            canExtendCycle: boolean;
+            /** Format: date */
+            extendFrom?: string | null;
+            /** Format: date */
+            extendUntil?: string | null;
         };
         GuardianInput: {
             /** Format: email */
@@ -1166,6 +1271,17 @@ export interface components {
             role: string;
             /** Format: uuid */
             userId: string;
+        };
+        PaymentAvailability: {
+            /** @enum {string|null} */
+            blockedBy?: "ACTIVE_CYCLE" | "PENDING_SESSIONS" | null;
+            canRegisterPayment: boolean;
+            /** Format: date */
+            opensOn?: string | null;
+            /** Format: date */
+            paidOnMax?: string | null;
+            /** Format: date */
+            paidOnMin?: string | null;
         };
         PaymentRegistered: {
             /** Format: uuid */
@@ -1272,6 +1388,16 @@ export interface components {
             /** Format: date-time */
             startsAt: string;
         };
+        StudentAccountView: {
+            active: boolean;
+            hasAccount: boolean;
+            /** Format: date-time */
+            openResetLinkUntil?: string | null;
+            /** Format: date-time */
+            passwordChangedAt?: string | null;
+            /** @enum {string|null} */
+            passwordChangedBy?: "SELF" | "COACH_LINK" | null;
+        };
         StudentBillingOverview: {
             /** Format: int32 */
             classesRemaining?: number | null;
@@ -1284,6 +1410,10 @@ export interface components {
             status: "ACTIVE" | "EXPIRING_SOON" | "NO_CYCLE";
             /** Format: uuid */
             studentId: string;
+        };
+        StudentBoard: {
+            counts: components["schemas"]["BoardCounts"];
+            students: components["schemas"]["BoardRow"][];
         };
         StudentCancelCommand: {
             /** Format: date-time */
@@ -1306,6 +1436,13 @@ export interface components {
             goal?: string;
             guardian?: components["schemas"]["GuardianInput"];
             whatsappPhone?: string;
+        };
+        StudentProfile: {
+            account: components["schemas"]["StudentAccountView"];
+            consents: components["schemas"]["StudentConsentsView"];
+            cycle: components["schemas"]["CycleOverview"];
+            student: components["schemas"]["StudentSummary"];
+            upcoming: components["schemas"]["UpcomingClass"][];
         };
         StudentSlotView: {
             /** Format: int32 */
@@ -1358,6 +1495,19 @@ export interface components {
         };
         TokenRequest: {
             token: string;
+        };
+        UpcomingClass: {
+            /** Format: uuid */
+            attendanceId: string;
+            /** Format: date-time */
+            endsAt: string;
+            /** Format: uuid */
+            eventId: string;
+            /** @enum {string} */
+            modality: "PERSONALIZED" | "SEMI_PERSONALIZED";
+            /** Format: date-time */
+            startsAt: string;
+            today: boolean;
         };
         UpdateBrandRequest: {
             brandName: string;
@@ -2127,6 +2277,26 @@ export interface operations {
             };
         };
     };
+    board: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["StudentBoard"];
+                };
+            };
+        };
+    };
     get: {
         parameters: {
             query?: never;
@@ -2311,6 +2481,28 @@ export interface operations {
             };
         };
     };
+    profile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["StudentProfile"];
+                };
+            };
+        };
+    };
     sheet: {
         parameters: {
             query?: {
@@ -2331,6 +2523,32 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["SheetView"];
+                };
+            };
+        };
+    };
+    cancelAttendances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                studentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelAttendancesCommand"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CancelAttendancesResult"];
                 };
             };
         };

@@ -6,6 +6,7 @@ import com.coachplatform.scheduling.api.ConfirmResult;
 import com.coachplatform.scheduling.api.HistoryView;
 import com.coachplatform.scheduling.api.QrView;
 import com.coachplatform.scheduling.api.SheetView;
+import com.coachplatform.scheduling.api.StudentProfile;
 import com.coachplatform.scheduling.api.TodayView;
 import com.coachplatform.security.AuthPrincipal;
 import jakarta.validation.Valid;
@@ -30,10 +31,12 @@ class AttendanceController {
 
     private final AttendanceConfirmationService confirmations;
     private final AttendanceReportService reports;
+    private final StudentProfileService profiles;
 
-    AttendanceController(AttendanceConfirmationService confirmations, AttendanceReportService reports) {
+    AttendanceController(AttendanceConfirmationService confirmations, AttendanceReportService reports, StudentProfileService profiles) {
         this.confirmations = confirmations;
         this.reports = reports;
+        this.profiles = profiles;
     }
 
     /** The token travels in the body, never in the URL, and is not printed by toString. */
@@ -49,6 +52,11 @@ class AttendanceController {
     @GetMapping("/api/coach/today")
     TodayView today() {
         return reports.today();
+    }
+
+    @GetMapping("/api/coach/students/{id}/profile")
+    StudentProfile profile(@PathVariable UUID id) {
+        return profiles.of(id);
     }
 
     @GetMapping("/api/coach/students/{id}/sheet")

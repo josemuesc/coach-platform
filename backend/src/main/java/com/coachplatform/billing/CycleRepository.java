@@ -21,4 +21,7 @@ interface CycleRepository extends JpaRepository<Cycle, UUID> {
     List<Cycle> findByStudentIdOrderByStartDateDescCreatedAtDesc(UUID studentId);
 
     List<Cycle> findByStatus(CycleStatus status);
+
+    /** Every cycle of the tenant, newest first: the first one met per student is that student's latest. */
+    List<Cycle> findAllByOrderByStartDateDescCreatedAtDesc();
 }
