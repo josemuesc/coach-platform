@@ -4,7 +4,7 @@ import type { BookableStudent } from './queries';
 
 type Event = Parameters<typeof pastChip>[0];
 const event = (over: Partial<Event> = {}): Event =>
-  ({ id: 'e', startsAt: '2026-10-09T11:00:00Z', endsAt: '2026-10-09T12:00:00Z', modality: 'PERSONALIZED', capacity: 1, occupied: 1, freeSeats: 0, status: 'SCHEDULED', phase: 'PAST', canShowQr: false, attendees: [], ...over }) as Event;
+  ({ id: 'e', startsAt: '2026-10-09T11:00:00Z', endsAt: '2026-10-09T12:00:00Z', modality: 'PERSONALIZED', capacity: 1, occupied: 1, freeSeats: 0, shared: false, status: 'SCHEDULED', phase: 'PAST', canShowQr: false, attendees: [], ...over }) as Event;
 const att = (status: string) => ({ status }) as Event['attendees'][number];
 
 describe('the day summary', () => {
@@ -19,6 +19,8 @@ describe('a class card', () => {
   it('shows seats only for semi-personalized classes', () => {
     expect(seatsText(event({ modality: 'SEMI_PERSONALIZED', capacity: 4, occupied: 3 }))).toBe('3 de 4 cupos');
     expect(seatsText(event())).toBeNull();
+    expect(seatsText(event({ shared: true, capacity: 1, occupied: 2 }))).toBe('Compartida · 2 alumnos');
+    expect(seatsText(event({ modality: 'SEMI_PERSONALIZED', shared: true, capacity: 4, occupied: 6 }))).toBe('Compartida · 6 alumnos');
   });
 
   it('says what happened to a class that ended, and nothing while it has not', () => {

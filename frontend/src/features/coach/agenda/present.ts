@@ -10,8 +10,9 @@ export function daySummary(date: string, day: Pick<AgendaDay, 'classCount' | 'fr
   return `${longDay(date)} · ${plural(day.classCount, 'clase', 'clases')} · ${plural(day.freeCount, 'espacio libre', 'espacios libres')}`;
 }
 
-/** "3 de 4 cupos" for a semi-personalized class; null for a personalized one (a seat count says nothing there). */
+/** "Compartida · 2 alumnos" when an exception put more people than the capacity (the server's `shared`); "3 de 4 cupos" for a semi-personalized class; null for a personalized one. */
 export function seatsText(event: EventRow): string | null {
+  if (event.shared) return `Compartida · ${event.occupied} alumnos`;
   return event.modality === 'SEMI_PERSONALIZED' ? `${event.occupied} de ${event.capacity} cupos` : null;
 }
 

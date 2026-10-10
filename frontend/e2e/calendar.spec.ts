@@ -76,6 +76,25 @@ test.describe('the agenda', () => {
     expect(await violations(page)).toEqual([]);
   });
 
+  test('a class an exception put more people into says "Compartida" and keeps its modality', async ({ page, request }) => {
+    const w = await newWorld(request);
+    const ana = await pupil(request, w, 'Ana Gómez');
+    const beto = await pupil(request, w, 'Beto Ruiz');
+    await book(request, w, ana, 10);
+    const res = await request.post(`${API}/api/coach/students/${beto.id}/sessions`, {
+      headers: bearer(w.coach.token),
+      data: { startsAt: new Date(`${DAY}T10:00:00-05:00`).toISOString(), override: true, overrideReason: 'Entreno compartido' },
+    });
+    expect(res.status()).toBe(201);
+    await open(page, w, `/coach/agenda?d=${DAY}`);
+    const list = page.getByRole('list', { name: 'Agenda del día' });
+    await expect(list.getByText('Compartida · 2 alumnos')).toBeVisible();
+    await expect(list.getByText('Ana Gómez')).toBeVisible();
+    await expect(list.getByText('Beto Ruiz')).toBeVisible();
+    await expect(list.getByText('Personalizada')).toBeVisible();
+    expect(await serious(page)).toEqual([]);
+  });
+
   test('a day without a schedule says so and links to the availability', async ({ page, request }) => {
     const w = await newWorld(request);
     expect((await request.put(`${API}/api/coach/availability/days/${isoDow(DAY)}`, { headers: bearer(w.coach.token), data: [] })).status()).toBe(200);

@@ -14,7 +14,7 @@ function attendee(over: Partial<Attendee> = {}): Attendee {
 
 function event(over: Partial<EventView> = {}): EventView {
   return {
-    id: 'e1', startsAt: '2026-10-09T15:00:00Z', endsAt: '2026-10-09T16:00:00Z', modality: 'PERSONALIZED', capacity: 1, occupied: 1, freeSeats: 0,
+    id: 'e1', startsAt: '2026-10-09T15:00:00Z', endsAt: '2026-10-09T16:00:00Z', modality: 'PERSONALIZED', capacity: 1, occupied: 1, freeSeats: 0, shared: false,
     status: 'SCHEDULED', phase: 'NOW', canShowQr: true, attendees: [attendee()], ...over,
   };
 }

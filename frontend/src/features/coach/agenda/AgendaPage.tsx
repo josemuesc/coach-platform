@@ -34,7 +34,10 @@ function EventCard({ event }: { event: NonNullable<AgendaRow['event']> }) {
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm text-ink-2">{modalityName(event.modality)}</p>
-        {chip ? <Chip tone={chip.tone}>{chip.text}</Chip> : seats && <p className="text-sm font-bold text-brand-ink">{seats}</p>}
+        <div className="flex flex-col items-end gap-1">
+          {seats && <p className="text-sm font-bold text-brand-ink">{seats}</p>}
+          {chip && <Chip tone={chip.tone}>{chip.text}</Chip>}
+        </div>
       </div>
       <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-display text-lg font-bold leading-tight">
         {event.attendees.map((a, i) => (
