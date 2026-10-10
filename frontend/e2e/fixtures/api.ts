@@ -53,8 +53,8 @@ export async function createStudent(request: APIRequestContext, coach: Coach, na
 export async function acceptInvitation(request: APIRequestContext, student: Student, password = PASSWORD): Promise<void> {
   const preview = await request.post(`${API}/api/invitations/preview`, { data: { token: student.inviteToken } });
   expect(preview.status()).toBe(200);
-  const texts = ((await preview.json()) as { consents: { type: string; version: string }[] }).consents;
-  const data = texts.find((t) => t.type === 'DATA_ADULT')!;
+  const texts = ((await preview.json()) as { consents: { type: string; version: string }[] }).consents;   // the required one: adult or guardian
+  const data = texts.find((t) => t.type === 'DATA_ADULT' || t.type === 'DATA_GUARDIAN')!;
   const res = await request.post(`${API}/api/invitations/accept`, {
     data: { token: student.inviteToken, password, acceptData: true, dataVersion: data.version, acceptWhatsapp: false, whatsappVersion: null },
   });

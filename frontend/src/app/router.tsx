@@ -38,7 +38,9 @@ export const routes: RouteObject[] = [
         lazy: () => import('./layouts/CoachLayout'),
         children: [
           { index: true, lazy: () => import('../features/coach/today/TodayPage').then((m) => ({ Component: m.TodayPage })) },
-          { path: 'students', element: <ComingSoon title="Alumnos" /> },
+          { path: 'students', lazy: () => import('../features/coach/students/StudentsPage').then((m) => ({ Component: m.StudentsPage })) },
+          { path: 'students/new', lazy: () => import('../features/coach/students/NewStudentPage').then((m) => ({ Component: m.NewStudentPage })) },
+          { path: 'students/:id', lazy: () => import('../features/coach/students/StudentProfilePage').then((m) => ({ Component: m.StudentProfilePage })) },
           { path: 'agenda', element: <ComingSoon title="Agenda" /> },
           { path: 'settings', element: <ChangePasswordPage /> },
         ],

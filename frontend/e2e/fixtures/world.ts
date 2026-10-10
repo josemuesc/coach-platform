@@ -47,7 +47,12 @@ export interface Pupil {
 }
 
 /** A student with a paid, active cycle. `account`: also accepts the invitation so they can log in. */
-export async function pupil(request: APIRequestContext, world: World, name: string, opts: { semi?: boolean; account?: boolean } = {}): Promise<Pupil> {
+export async function pupil(
+  request: APIRequestContext,
+  world: World,
+  name: string,
+  opts: { semi?: boolean; account?: boolean; planId?: string; pay?: boolean } = {},
+): Promise<Pupil> {
   const email = uniqueEmail('alumno');
   const created = await request.post(`${API}/api/coach/students`, {
     headers: bearer(world.coach.token),
@@ -57,11 +62,13 @@ export async function pupil(request: APIRequestContext, world: World, name: stri
   const body = (await created.json()) as { student: { id: string }; inviteUrl: string };
   const student = { id: body.student.id, email, inviteToken: body.inviteUrl.slice(body.inviteUrl.lastIndexOf('/') + 1) };
   if (opts.account) await acceptInvitation(request, student);
-  const paid = await request.post(`${API}/api/coach/students/${student.id}/payments`, {
-    headers: bearer(world.coach.token),
-    data: { planId: opts.semi ? world.semiPlan : world.personalizedPlan, amountCop: 520000, method: 'CASH' },
-  });
-  expect(paid.status()).toBe(201);
+  if (opts.pay !== false) {
+    const paid = await request.post(`${API}/api/coach/students/${student.id}/payments`, {
+      headers: bearer(world.coach.token),
+      data: { planId: opts.planId ?? (opts.semi ? world.semiPlan : world.personalizedPlan), amountCop: 520000, method: 'CASH' },
+    });
+    expect(paid.status()).toBe(201);
+  }
   return { id: student.id, name, email };
 }
 
@@ -108,4 +115,40 @@ export async function classesUsed(request: APIRequestContext, world: World, stud
   const res = await request.get(`${API}/api/coach/students/${student.id}/cycles/active`, { headers: bearer(world.coach.token) });
   expect(res.status()).toBe(200);
   return ((await res.json()) as { classesUsed: number }).classesUsed;
+}
+
+/** A plan of the coach (the world already has an 8-class personalized and an 8-class semi one). */
+export async function plan(request: APIRequestContext, world: World, name: string, classes: number, modality: 'PERSONALIZED' | 'SEMI_PERSONALIZED', price = 520000): Promise<string> {
+  const res = await request.post(`${API}/api/coach/plans`, { headers: bearer(world.coach.token), data: { name, classesIncluded: classes, priceCop: price, modality } });
+  expect(res.status()).toBe(201);
+  return ((await res.json()) as { id: string }).id;
+}
+
+const TODAY_SQL = "(now() AT TIME ZONE 'America/Bogota')::date";
+
+/** The student's active cycle now ends `days` days from today (Bogota): the cycle is moved by SQL, the rules are the server's own. */
+export function endCycleIn(studentId: string, days: number): void {
+  sql(`UPDATE cycle SET start_date = ${TODAY_SQL} - 10, end_date = ${TODAY_SQL} + ${days}, original_end_date = ${TODAY_SQL} + ${days} WHERE student_id = '${studentId}' AND status = 'ACTIVE'`);
+}
+
+/** The student's active cycle ran out of time two days ago (the server reads it as EXPIRED). */
+export function expireCycle(studentId: string): void {
+  sql(`UPDATE cycle SET start_date = ${TODAY_SQL} - 40, end_date = ${TODAY_SQL} - 2, original_end_date = ${TODAY_SQL} - 2 WHERE student_id = '${studentId}' AND status = 'ACTIVE'`);
+}
+
+/** Books one class, moves it into the past and marks it, so the student has used one class. `slot` keeps the coach's events from overlapping. */
+export async function useAClass(request: APIRequestContext, world: World, student: Pupil, hour: number, slot: number, result: 'ATTENDED' | 'NO_SHOW' = 'ATTENDED'): Promise<Booked> {
+  const booked = await book(request, world, student, hour);
+  moveEvent(booked.eventId, -(40 + 50 * slot), -(5 + 50 * slot));
+  const res = await request.post(`${API}/api/coach/attendances/${booked.attendanceId}/mark`, { headers: bearer(world.coach.token), data: { result } });
+  expect(res.status()).toBe(200);
+  return booked;
+}
+
+export async function suspend(request: APIRequestContext, world: World, student: Pupil, name: string): Promise<void> {
+  const res = await request.put(`${API}/api/coach/students/${student.id}`, {
+    headers: bearer(world.coach.token),
+    data: { data: { fullName: name, email: student.email, whatsappPhone: '3001234567', birthDate: '1990-05-01' }, active: false },
+  });
+  expect(res.status()).toBe(200);
 }

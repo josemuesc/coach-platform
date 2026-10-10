@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api, call } from '../../../api/client';
 import type { components } from '../../../api/schema';
+import { BOARD_KEY, PROFILE_KEYS } from '../students/keys';
 
 export type TodayView = components['schemas']['TodayView'];
 export type EventView = components['schemas']['EventView'];
@@ -29,7 +30,8 @@ export function useOverview() {
 
 function useRefreshAfterWrite() {
   const queryClient = useQueryClient();
-  return () => Promise.all([TODAY_KEY, PENDING_KEY, OVERVIEW_KEY].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+  // marking a class changes the board (a student may run out of classes) and every profile: refresh them too
+  return () => Promise.all([TODAY_KEY, PENDING_KEY, OVERVIEW_KEY, BOARD_KEY, PROFILE_KEYS].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 }
 
 export function useMarkOne() {

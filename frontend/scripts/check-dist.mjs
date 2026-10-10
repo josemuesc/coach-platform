@@ -18,6 +18,7 @@ const ALLOWED = [
   /^https:\/\/github\.com\/ungap\//,
   /^https:\/\/github\.com\/syntax-tree\/hast-util-to-jsx-runtime$/,   // react-markdown: the link inside one of its error messages
   /^https:\/\/bit\.ly\/wb-precache/,
+  /^https:\/\/wa\.me\/(57)?(\?text=)?$/,   // the WhatsApp link the coach opens BY HAND (a normal link, target _blank): the page never requests it
   /^http:\/\/localhost/,
   /^http:\/\/placeholder/,
 ];
