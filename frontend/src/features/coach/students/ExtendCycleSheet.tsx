@@ -3,6 +3,7 @@ import { isApiError, messageFor } from '../../../api/errors';
 import { formatDayMonth, formatDayMonthYear } from '../../../lib/format';
 import { Banner } from '../../../ui/Banner';
 import { Button } from '../../../ui/Button';
+import { DatePicker } from '../../../ui/DatePicker';
 import { Sheet } from '../../../ui/Overlays';
 import { useExtendCycle, type Profile } from './queries';
 
@@ -55,30 +56,16 @@ export function ExtendCycleSheet({ profile, onClose }: { profile: Profile; onClo
           <p className="text-base">
             {reopening ? 'El ciclo venció el' : 'El ciclo vence el'} <strong>{formatDayMonthYear(cycle.endDate)}</strong>.
           </p>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="extend-date" className="font-semibold">
-              Nueva fecha límite
-            </label>
-            <input
-              id="extend-date"
-              type="date"
-              value={chosen}
-              min={window_.extendFrom ?? undefined}
-              max={window_.extendUntil ?? undefined}
-              aria-describedby={`extend-hint${dateError ? ' extend-date-error' : ''}`}
-              aria-invalid={dateError ? true : undefined}
-              onChange={(e) => setDate(e.target.value)}
-              className="min-h-12 rounded-xl border border-line bg-white px-3 text-base"
-            />
-            <p id="extend-hint" className="text-sm text-ink-2">
-              {window_.extendFrom && window_.extendUntil ? `Entre el ${formatDayMonth(window_.extendFrom)} y el ${formatDayMonth(window_.extendUntil)}.` : ''} La fecha solo se puede mover hacia adelante.
-            </p>
-            {dateError && (
-              <p id="extend-date-error" role="alert" className="text-sm font-semibold text-red-ink">
-                {dateError}
-              </p>
-            )}
-          </div>
+          <DatePicker
+            id="extend-date"
+            label="Nueva fecha límite"
+            value={chosen}
+            min={window_.extendFrom}
+            max={window_.extendUntil}
+            hint={`${window_.extendFrom && window_.extendUntil ? `Entre el ${formatDayMonth(window_.extendFrom)} y el ${formatDayMonth(window_.extendUntil)}.` : ''} La fecha solo se puede mover hacia adelante.`.trim()}
+            error={dateError ?? undefined}
+            onChange={setDate}
+          />
           <div className="flex flex-col gap-1">
             <label htmlFor="extend-reason" className="font-semibold">
               Motivo

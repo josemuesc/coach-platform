@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Link } from 'react-router';
 import { isApiError, messageFor } from '../../../api/errors';
 import { invitationMessage, isMinorOn, todayBogota } from '../../../lib/format';
 import { useSession } from '../../../session/SessionProvider';
 import { Banner } from '../../../ui/Banner';
 import { Button } from '../../../ui/Button';
+import { DatePicker } from '../../../ui/DatePicker';
 import { Field } from '../../../ui/Field';
 import { ShareLink } from './ShareLink';
 import { useCreateStudent } from './queries';
@@ -113,12 +114,13 @@ export function NewStudentPage() {
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <Field label="Nombre completo" autoComplete="off" error={formState.errors.fullName?.message} {...register('fullName', { required: REQUIRED, validate: (v) => v.trim() !== '' || REQUIRED })} />
-        <Field
-          label="Fecha de nacimiento"
-          type="date"
-          max={todayBogota()}
-          error={formState.errors.birthDate?.message}
-          {...register('birthDate', { required: REQUIRED })}
+        <Controller
+          control={control}
+          name="birthDate"
+          rules={{ required: REQUIRED }}
+          render={({ field }) => (
+            <DatePicker label="Fecha de nacimiento" value={field.value} max={todayBogota()} error={formState.errors.birthDate?.message} onChange={field.onChange} />
+          )}
         />
 
         {minor ? (

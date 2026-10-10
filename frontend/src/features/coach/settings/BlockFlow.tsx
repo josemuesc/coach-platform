@@ -5,6 +5,7 @@ import { formatDayMonth, hhmmLabel, shortDay, todayBogota } from '../../../lib/f
 import { clockTime, plural } from '../../../lib/time';
 import { Banner } from '../../../ui/Banner';
 import { Button } from '../../../ui/Button';
+import { DatePicker } from '../../../ui/DatePicker';
 import { Field } from '../../../ui/Field';
 import { Sheet } from '../../../ui/Overlays';
 import { Segmented } from '../../../ui/Segmented';
@@ -114,7 +115,7 @@ export function BlockFlow({ onClose }: { onClose: () => void }) {
               void reviewIt();
             }}
           >
-            <Field label="Fecha" type="date" value={date} min={todayBogota()} onChange={(e) => setDate(e.target.value)} />
+            <DatePicker label="Fecha" value={date} min={todayBogota()} onChange={setDate} />
             <Segmented
               label="Duración del bloqueo"
               value={mode}

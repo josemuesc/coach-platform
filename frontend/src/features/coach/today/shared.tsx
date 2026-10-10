@@ -46,7 +46,14 @@ export function Avatar({ name }: { name: string }) {
 
 /** After a mark the button the coach pressed is gone (a chip replaces it): put the focus on that student's row instead of losing it. */
 export function focusRow(attendanceId: string) {
-  window.requestAnimationFrame(() => {
-    document.querySelector<HTMLElement>(`[data-attendance="${CSS.escape(attendanceId)}"]`)?.focus();
-  });
+  // The closing dialog also gives the focus back to the element that opened it (which no longer exists) and, under load, can do it AFTER
+  // the first try: keep trying for a moment until the row really holds the focus.
+  let tries = 0;
+  const attempt = () => {
+    const row = document.querySelector<HTMLElement>(`[data-attendance="${CSS.escape(attendanceId)}"]`);
+    row?.focus();
+    if (row && document.activeElement === row) return;
+    if (++tries < 8) window.setTimeout(attempt, 60);
+  };
+  window.requestAnimationFrame(attempt);
 }

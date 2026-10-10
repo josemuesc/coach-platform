@@ -3,6 +3,7 @@ import { messageFor } from '../../../api/errors';
 import { hhmmLabel, instantAt, longDay, shortDay, todayBogota } from '../../../lib/format';
 import { Banner } from '../../../ui/Banner';
 import { Button } from '../../../ui/Button';
+import { DatePicker } from '../../../ui/DatePicker';
 import { Sheet } from '../../../ui/Overlays';
 import { Switch } from '../../../ui/Switch';
 import { overrideNeed, REASON_CHIPS, reasonTextFor, slotNote, studentOption, studentSummary, type ReasonKey } from './present';
@@ -53,7 +54,7 @@ export function BookSheet({ initial, onClose }: Props) {
   const [exception, setException] = useState(false);
   const [reasonKey, setReasonKey] = useState<ReasonKey | null>(null);
   const [reason, setReason] = useState('');
-  const ids = { student: useId(), date: useId(), time: useId(), reason: useId() };
+  const ids = { student: useId(), time: useId(), reason: useId() };
 
   const options = useBookingOptions(studentId, date);
   const student = students.data?.find((s) => s.studentId === studentId);
@@ -118,24 +119,16 @@ export function BookSheet({ initial, onClose }: Props) {
           {student && <p className="text-sm text-ink-2">{studentSummary(student)}</p>}
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor={ids.date} className="font-semibold">
-            Día
-          </label>
-          <input
-            id={ids.date}
-            type="date"
-            value={date}
-            min={todayBogota()}
-            onChange={(e) => {
-              setDate(e.target.value);
-              setTime(null);
-              book.reset();
-            }}
-            className="min-h-12 rounded-xl border border-line bg-white px-3 text-base"
-          />
-          {date && <p className="text-sm text-ink-2">{longDay(date)}</p>}
-        </div>
+        <DatePicker
+          label="Día"
+          value={date}
+          min={todayBogota()}
+          onChange={(d) => {
+            setDate(d);
+            setTime(null);
+            book.reset();
+          }}
+        />
 
         {!exception && (
           <div className="flex flex-col gap-2">

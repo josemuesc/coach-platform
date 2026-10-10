@@ -7,6 +7,7 @@ import { plural } from '../../../lib/time';
 import { Banner } from '../../../ui/Banner';
 import { Button } from '../../../ui/Button';
 import { Chip } from '../../../ui/Chip';
+import { DatePicker } from '../../../ui/DatePicker';
 import { Dialog, Sheet } from '../../../ui/Overlays';
 import { RadioCards } from '../../../ui/RadioCards';
 import { METHODS, methodLabel, modalityName, type Method } from './present';
@@ -144,22 +145,15 @@ export function PaymentFlow({ profile, onClose }: Props) {
                   className="min-h-12 rounded-xl border border-line bg-white px-3 text-base"
                 />
               </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="pay-date" className="text-sm font-semibold">
-                  Fecha del pago
-                </label>
-                <input
-                  id="pay-date"
-                  type="date"
-                  value={paidOn}
-                  min={window_.paidOnMin ?? undefined}
-                  max={window_.paidOnMax ?? undefined}
-                  aria-describedby={fieldErrors.date ? 'pay-date-error' : undefined}
-                  aria-invalid={fieldErrors.date ? true : undefined}
-                  onChange={(e) => setDraft({ ...draft, paidOn: e.target.value })}
-                  className="min-h-12 rounded-xl border border-line bg-white px-3 text-base"
-                />
-              </div>
+              <DatePicker
+                id="pay-date"
+                label="Fecha del pago"
+                value={paidOn}
+                min={window_.paidOnMin}
+                max={window_.paidOnMax}
+                error={undefined}
+                onChange={(d) => setDraft({ ...draft, paidOn: d })}
+              />
               {fieldErrors.date && (
                 <p id="pay-date-error" role="alert" className="col-span-2 text-sm font-semibold text-red-ink">
                   {fieldErrors.date}

@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { API, bearer, createMinor, acceptInvitation, previewStatus, setBrand, uniqueEmail } from './fixtures/api';
-import { expect, test, violations, watch } from './fixtures/page';
+import { dateTrigger, expect, goToMonth, pickDate, test, violations, watch } from './fixtures/page';
 import { book, endCycleIn, expireCycle, fitsToday, moveEvent, newWorld, plan, pupil, suspend, useAClass, type World } from './fixtures/world';
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -158,7 +158,7 @@ test.describe('creating a student', () => {
     expect(await serious(page)).toEqual([]);
     await page.getByLabel('Nombre completo').fill('Elena Invitada');
     await expect(page.getByLabel('Correo del alumno')).toHaveCount(0);                            // no birth date yet: nothing to ask
-    await page.getByLabel('Fecha de nacimiento').fill('1990-05-01');
+    await pickDate(page, page, 'Fecha de nacimiento', '1990-05-01');
     await page.getByLabel('Correo del alumno').fill(uniqueEmail('elena'));
     await page.getByLabel('Celular (opcional)').fill('300 123 4567');
     expect(await serious(page)).toEqual([]);
@@ -191,13 +191,13 @@ test.describe('creating a student', () => {
     const today = todayBogota();
     const eighteen = `${Number(today.slice(0, 4)) - 18}${today.slice(4)}`;
     await page.getByLabel('Nombre completo').fill('Mateo Sánchez');
-    await page.getByLabel('Fecha de nacimiento').fill(eighteen);                                  // turns 18 TODAY: an adult
+    await pickDate(page, page, 'Fecha de nacimiento', eighteen);                                  // turns 18 TODAY: an adult
     await expect(page.getByLabel('Correo del alumno')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Es menor de edad' })).toHaveCount(0);
-    await page.getByLabel('Fecha de nacimiento').fill(addDays(eighteen, 1));                      // turns 18 tomorrow: still a minor
+    await pickDate(page, page, 'Fecha de nacimiento', addDays(eighteen, 1));                      // turns 18 tomorrow: still a minor
     await expect(page.getByRole('heading', { name: 'Es menor de edad' })).toBeVisible();
     await expect(page.getByLabel('Correo del alumno')).toHaveCount(0);
-    await page.getByLabel('Fecha de nacimiento').fill('2010-03-14');
+    await pickDate(page, page, 'Fecha de nacimiento', '2010-03-14');
 
     await page.getByLabel('Nombre del acudiente').fill('Marta Sánchez');
     await page.getByLabel('Parentesco').fill('madre');
@@ -223,7 +223,7 @@ test.describe('creating a student', () => {
     const w = await newWorld(request);
     await open(page, w, '/coach/students/new');
     await page.getByLabel('Nombre completo').fill('Sin Número');
-    await page.getByLabel('Fecha de nacimiento').fill('1990-05-01');
+    await pickDate(page, page, 'Fecha de nacimiento', '1990-05-01');
     await page.getByLabel('Correo del alumno').fill(uniqueEmail('sn'));
     await page.getByLabel('Celular (opcional)').fill('6011234567');
     await page.getByRole('button', { name: 'Crear alumno e invitar' }).click();
@@ -375,21 +375,27 @@ test.describe('the profile', () => {
     await open(page, w, `/coach/students/${ana.id}`);
     await page.getByRole('button', { name: 'Extender ciclo' }).click();
     const sheet = page.getByRole('dialog', { name: 'Extender ciclo' });
-    const date = sheet.getByLabel('Nueva fecha límite');
-    await expect(date).toHaveAttribute('min', cycle.extension.extendFrom);
-    await expect(date).toHaveAttribute('max', cycle.extension.extendUntil);
     await expect(sheet.getByText('La fecha solo se puede mover hacia adelante.')).toBeVisible();
     await expect(sheet.getByRole('button', { name: /^Extender hasta/ })).toBeDisabled();           // a reason is required
     expect(await serious(page)).toEqual([]);
 
-    await date.fill(addDays(cycle.extension.extendUntil, 1));
+    // the calendar grays out what the server would refuse: before the allowed range and after the extension limit
+    await dateTrigger(sheet, 'Nueva fecha límite').click();
+    const calendar = page.getByRole('dialog', { name: 'Nueva fecha límite' });
+    await expect(calendar.locator(`[data-day="${cycle.extension.extendFrom}"]`)).toBeEnabled();
+    const before = addDays(cycle.extension.extendFrom, -1);
+    if (before.slice(0, 7) === cycle.extension.extendFrom.slice(0, 7)) await expect(calendar.locator(`[data-day="${before}"]`)).toBeDisabled();
+    else await expect(calendar.getByRole('button', { name: 'Mes anterior' })).toBeDisabled();
+    await goToMonth(calendar, cycle.extension.extendUntil);
+    await expect(calendar.locator(`[data-day="${cycle.extension.extendUntil}"]`)).toBeEnabled();
+    const after = addDays(cycle.extension.extendUntil, 1);
+    if (after.slice(0, 7) === cycle.extension.extendUntil.slice(0, 7)) await expect(calendar.locator(`[data-day="${after}"]`)).toBeDisabled();
+    else await expect(calendar.getByRole('button', { name: 'Mes siguiente' })).toBeDisabled();
+    await calendar.getByRole('button', { name: 'Cerrar' }).click();
     await sheet.getByLabel('Motivo').fill('Viaje');
-    await sheet.getByRole('button', { name: /^Extender hasta/ }).click();
-    await expect(sheet.getByRole('alert').filter({ hasText: 'Se superó el máximo de días de extensión permitido.' })).toBeVisible();
-    expect(await serious(page)).toEqual([]);
 
     const target = addDays(cycle.extension.extendFrom, 2);
-    await date.fill(target);
+    await pickDate(page, sheet, 'Nueva fecha límite', target);
     await sheet.getByRole('button', { name: /^Extender hasta/ }).click();
     await expect(sheet.getByText(new RegExp(`La nueva fecha límite es el ${dmy(target)}`))).toBeVisible();
     await sheet.getByRole('button', { name: 'Listo' }).click();

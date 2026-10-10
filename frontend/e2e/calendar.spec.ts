@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { APIRequestContext, Page } from '@playwright/test';
 import { API, bearer, createMinor, uniqueEmail } from './fixtures/api';
-import { expect, test, violations, watch } from './fixtures/page';
+import { expect, pickDate, test, violations, watch } from './fixtures/page';
 import { book, newWorld, pupil, type World } from './fixtures/world';
 
 const addDays = (day: string, n: number) => new Date(Date.parse(`${day}T12:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
@@ -280,7 +280,7 @@ test.describe('availability', () => {
     await open(page, w, '/coach/availability');
     await page.getByRole('button', { name: '+ Agregar bloqueo' }).click();
     const sheet = page.getByRole('dialog', { name: 'Agregar bloqueo' });
-    await sheet.getByLabel('Fecha').fill(DAY);
+    await pickDate(page, sheet, 'Fecha', DAY);
     await sheet.getByLabel('Desde').fill('09:00');
     await sheet.getByLabel('Hasta').fill('12:00');
     await sheet.getByLabel('Motivo').fill('Reunión');
@@ -324,7 +324,7 @@ test.describe('availability', () => {
     await open(page, w, '/coach/availability');
     await page.getByRole('button', { name: '+ Agregar bloqueo' }).click();
     const sheet = page.getByRole('dialog', { name: 'Agregar bloqueo' });
-    await sheet.getByLabel('Fecha').fill(DAY);
+    await pickDate(page, sheet, 'Fecha', DAY);
     await sheet.getByLabel('Desde').fill('09:00');
     await sheet.getByLabel('Hasta').fill('12:00');
     await sheet.getByLabel('Motivo').fill('Festivo');
@@ -354,7 +354,7 @@ test.describe('availability', () => {
     await open(page, w, '/coach/availability');
     await page.getByRole('button', { name: '+ Agregar bloqueo' }).click();
     const sheet = page.getByRole('dialog', { name: 'Agregar bloqueo' });
-    await sheet.getByLabel('Fecha').fill(addDays(DAY, 1));
+    await pickDate(page, sheet, 'Fecha', addDays(DAY, 1));
     await sheet.getByRole('radio', { name: 'Todo el día' }).click();
     await sheet.getByLabel('Motivo').fill('Festivo');
     await sheet.getByRole('button', { name: 'Revisar y guardar' }).click();
@@ -364,7 +364,7 @@ test.describe('availability', () => {
 
     await page.getByRole('button', { name: '+ Agregar bloqueo' }).click();
     const second = page.getByRole('dialog', { name: 'Agregar bloqueo' });
-    await second.getByLabel('Fecha').fill(DAY);
+    await pickDate(page, second, 'Fecha', DAY);
     await second.getByRole('radio', { name: 'Todo el día' }).click();
     await second.getByLabel('Motivo').fill('Festivo');
     await second.getByRole('button', { name: 'Revisar y guardar' }).click();

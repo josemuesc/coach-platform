@@ -30,8 +30,11 @@ function Modal({ open, onOpenChange, title, description, children, className }: 
       ref={ref}
       aria-labelledby={titleId}
       aria-describedby={description ? descriptionId : undefined}
-      // fires for Esc and for close(): the parent's state follows
-      onClose={() => onOpenChange(false)}
+      // fires for Esc and for close(): the parent's state follows. React also hands this event to the parents of a <dialog> nested in
+      // another one (a date picker inside a sheet): only react to our own
+      onClose={(e) => {
+        if (e.target === e.currentTarget) onOpenChange(false);
+      }}
       // a click on the backdrop lands on the <dialog> itself (it has no padding of its own)
       onClick={(e) => {
         if (e.target === e.currentTarget) onOpenChange(false);
