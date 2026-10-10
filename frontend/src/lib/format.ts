@@ -87,3 +87,73 @@ export function whatsappLink(phone: string | null | undefined, message: string):
 export function invitationMessage(recipientName: string, brandName: string, url: string): string {
   return `Hola ${recipientName}, ${brandName} te invita a crear tu cuenta: ${url}`;
 }
+
+// ---- the week and the clock of the calendar screens (display and serialization only; what is bookable is the server's) ----
+
+const WEEKDAY_NAMES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const MONTH_NAMES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+/** The letters of the week strip, Monday first. */
+export const WEEKDAY_LETTERS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'] as const;
+
+/** A YYYY-MM-DD moved by whole days (calendar arithmetic only: no zone can shift it). */
+export function addDays(day: string, n: number): string {
+  const d = new Date(`${day}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+/** The Monday of the week that holds `day`. */
+export function mondayOf(day: string): string {
+  const dow = new Date(`${day}T12:00:00Z`).getUTCDay();
+  return addDays(day, -((dow + 6) % 7));
+}
+
+/** "lunes", "martes"... for a YYYY-MM-DD. */
+export function weekdayName(day: string): string {
+  return WEEKDAY_NAMES[new Date(`${day}T12:00:00Z`).getUTCDay()] ?? '';
+}
+
+/** Name of a weekday from the server's number (1 = Monday ... 7 = Sunday), capitalized. */
+export function dayOfWeekName(dayOfWeek: number): string {
+  const name = WEEKDAY_NAMES[dayOfWeek % 7] ?? '';
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+/** "OCTUBRE 2026" */
+export function monthYearHeader(day: string): string {
+  return `${MONTH_NAMES[Number(day.slice(5, 7)) - 1] ?? ''} ${day.slice(0, 4)}`.toUpperCase();
+}
+
+/** "Viernes 9 de octubre" */
+export function longDay(day: string): string {
+  const name = weekdayName(day);
+  return `${name.charAt(0).toUpperCase()}${name.slice(1)} ${Number(day.slice(8))} de ${MONTH_NAMES[Number(day.slice(5, 7)) - 1] ?? ''}`;
+}
+
+/** "vie 9 oct" */
+export function shortDay(day: string): string {
+  return `${weekdayName(day).slice(0, 3)} ${formatDayMonth(day)}`;
+}
+
+/** "5 – 11 oct" for the week that starts on `monday` (the month shows once when both ends share it). */
+export function weekRange(monday: string): string {
+  const end = addDays(monday, 6);
+  const [, m1] = monday.split('-');
+  const [, m2] = end.split('-');
+  return m1 === m2 ? `${Number(monday.slice(8))} – ${formatDayMonth(end)}` : `${formatDayMonth(monday)} – ${formatDayMonth(end)}`;
+}
+
+/** "06:00" -> "6:00 a. m.", "12:00" -> "12:00 m.", "16:30" -> "4:30 p. m." The coach writes noon as "12:00 m.". */
+export function hhmmLabel(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  if (h === undefined || m === undefined || Number.isNaN(h) || Number.isNaN(m)) return hhmm;
+  const minutes = String(m).padStart(2, '0');
+  if (h === 12 && m === 0) return '12:00 m.';
+  const period = h < 12 ? 'a. m.' : 'p. m.';
+  return `${h % 12 === 0 ? 12 : h % 12}:${minutes} ${period}`;
+}
+
+/** The instant of a local Bogota day and time ("2026-10-10", "15:00"), as the ISO string the API takes. Bogota has no daylight saving. */
+export function instantAt(day: string, hhmm: string): string {
+  return new Date(`${day}T${hhmm}:00-05:00`).toISOString();
+}

@@ -25,6 +25,7 @@ test('the coach and student areas have none, also with a bright brand color', as
   await expect(page).toHaveURL(/\/coach$/);
   expect(await serious(page)).toEqual([]);
   await page.getByRole('link', { name: 'Ajustes' }).click();
+  await page.getByRole('link', { name: /^Cuenta/ }).click();
   await expect(page.getByRole('heading', { name: 'Cuenta' })).toBeVisible();
   expect(await serious(page)).toEqual([]);
 

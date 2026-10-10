@@ -46,3 +46,23 @@ export function modalityConflictOf(error: unknown): ModalityConflictDetails | nu
   if (!d || typeof d.newPlanModality !== 'string' || !Array.isArray(d.conflictingAttendances) || !d.conflictingAttendances.every(isBookedClass)) return null;
   return { newPlanModality: d.newPlanModality, conflictingAttendances: d.conflictingAttendances, options: Array.isArray(d.options) ? d.options : [] };
 }
+
+type BlockPreview = components['schemas']['BlockPreview'];
+
+function isAffectedClass(value: unknown): boolean {
+  const v = value as Partial<BlockPreview['affected'][number]> | null;
+  return !!v && typeof v.attendanceId === 'string' && typeof v.studentName === 'string' && typeof v.startsAt === 'string' && typeof v.modality === 'string';
+}
+
+/**
+ * The classes a block would release NOW, when they are not the ones the coach confirmed (BLOCK_AFFECTED_CHANGED: nothing was saved). Documented in
+ * docs/error-codes.md and shaped by CalendarScreensTest; OpenAPI cannot describe error `details`, so it is checked at run time. Null when the
+ * error is something else or the shape is not the expected one.
+ */
+export function blockAffectedOf(error: unknown): BlockPreview | null {
+  if (!isApiError(error) || !error.is('BLOCK_AFFECTED_CHANGED')) return null;
+  const p = (error.details as { preview?: Partial<BlockPreview> } | undefined)?.preview;
+  if (!p || !Array.isArray(p.affected) || !p.affected.every(isAffectedClass)) return null;
+  if (typeof p.releasedCount !== 'number' || typeof p.markedUntouched !== 'number' || typeof p.pendingUntouched !== 'number') return null;
+  return p as BlockPreview;
+}

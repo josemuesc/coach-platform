@@ -1,11 +1,13 @@
 import type { ButtonHTMLAttributes } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'dangerGhost';
+type Variant = 'primary' | 'secondary' | 'danger' | 'destructive' | 'ghost' | 'dangerGhost';
 
 const VARIANTS: Record<Variant, string> = {
   primary: 'bg-brand text-brand-contrast border-transparent',
   secondary: 'bg-white text-ink border-line',
   danger: 'bg-white text-red-ink border-red-ink',
+  /** the action that cancels things for real: solid red */
+  destructive: 'bg-red-ink text-white border-transparent',
   ghost: 'bg-transparent text-ink border-transparent underline',
   dangerGhost: 'bg-transparent text-red-ink border-transparent underline',
 };

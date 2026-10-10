@@ -8,7 +8,7 @@ const ITEMS: NavItem[] = [
   { to: '/coach', label: 'Hoy', icon: <TodayIcon />, end: true },
   { to: '/coach/students', label: 'Alumnos', icon: <UsersIcon /> },
   { to: '/coach/agenda', label: 'Agenda', icon: <CalendarIcon /> },
-  { to: '/coach/settings', label: 'Ajustes', icon: <SettingsIcon /> },
+  { to: '/coach/settings', label: 'Ajustes', icon: <SettingsIcon />, alsoActiveOn: ['/coach/plans', '/coach/availability', '/coach/account'] },
 ];
 
 export function CoachLayout() {

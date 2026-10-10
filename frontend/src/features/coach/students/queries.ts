@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, call } from '../../../api/client';
 import type { components } from '../../../api/schema';
-import { BOARD_KEY, PLANS_KEY, PROFILE_KEYS, profileKey, sheetKey } from './keys';
+import { BOARD_KEY, PLANS_KEY, profileKey, sheetKey } from './keys';
 
 type S = components['schemas'];
 export type Board = S['StudentBoard'];
@@ -37,13 +37,10 @@ export function useSheet(studentId: string, enabled: boolean) {
   });
 }
 
-/** Everything a write about a student, a cycle or a class can change on the screens that show students, plus "Hoy". */
+/** A write about a student, a cycle or a class can change "Hoy", the agenda, the booking options, the board and every profile: refresh all of the coach's data. */
 function useRefreshStudents() {
   const queryClient = useQueryClient();
-  return () =>
-    Promise.all(
-      [BOARD_KEY, PROFILE_KEYS, ['coach', 'today'], ['coach', 'pending'], ['coach', 'overview']].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-    );
+  return () => queryClient.invalidateQueries({ queryKey: ['coach'] });
 }
 
 export function useRegisterPayment(studentId: string) {

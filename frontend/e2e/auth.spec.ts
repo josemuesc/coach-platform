@@ -87,6 +87,7 @@ test('logging out clears the session and the areas close again', async ({ page, 
   const coach = await registerCoach(request);
   await signIn(page, coach.email);
   await page.getByRole('link', { name: 'Ajustes' }).click();
+  await page.getByRole('link', { name: /^Cuenta/ }).click();
   await page.getByRole('button', { name: 'Cerrar sesión' }).click();
   await expect(page).toHaveURL(/\/login/);
   expect(await page.evaluate(() => window.localStorage.getItem('cp.token'))).toBeNull();
@@ -118,6 +119,7 @@ test('changing the password in the app keeps this session on a NEW token and end
   const before = await page.evaluate(() => window.localStorage.getItem('cp.token'));
 
   await page.getByRole('link', { name: 'Ajustes' }).click();
+  await page.getByRole('link', { name: /^Cuenta/ }).click();
   await page.getByLabel('Contraseña actual').fill(PASSWORD);
   await page.getByLabel('Contraseña nueva', { exact: true }).fill('Nueva-clave-segura-9');
   await page.getByLabel('Repite la contraseña nueva').fill('Nueva-clave-segura-9');
@@ -127,7 +129,7 @@ test('changing the password in the app keeps this session on a NEW token and end
   const after = await page.evaluate(() => window.localStorage.getItem('cp.token'));
   expect(after).not.toBe(before);
   await page.reload();
-  await expect(page).toHaveURL(/\/coach\/settings$/); // still signed in
+  await expect(page).toHaveURL(/\/coach\/account$/); // still signed in
   expect((await request.get(`${API}/api/me`, { headers: bearer(otherDevice) })).status()).toBe(401);
   await login(request, coach.email, 'Nueva-clave-segura-9');
 });
@@ -136,18 +138,20 @@ test('a wrong current password on the change form is an input error and does NOT
   const coach = await registerCoach(request);
   await signIn(page, coach.email);
   await page.getByRole('link', { name: 'Ajustes' }).click();
+  await page.getByRole('link', { name: /^Cuenta/ }).click();
   await page.getByLabel('Contraseña actual').fill('no-es-la-clave');
   await page.getByLabel('Contraseña nueva', { exact: true }).fill('Nueva-clave-segura-9');
   await page.getByLabel('Repite la contraseña nueva').fill('Nueva-clave-segura-9');
   await page.getByRole('button', { name: 'Cambiar contraseña' }).click();
   await expect(page.getByRole('alert')).toHaveText('Correo o contraseña incorrectos.');
-  await expect(page).toHaveURL(/\/coach\/settings$/);
+  await expect(page).toHaveURL(/\/coach\/account$/);
 });
 
 test('a too-short new password is refused by the server and the message comes from the catalog', async ({ page, request }) => {
   const coach = await registerCoach(request);
   await signIn(page, coach.email);
   await page.getByRole('link', { name: 'Ajustes' }).click();
+  await page.getByRole('link', { name: /^Cuenta/ }).click();
   await page.getByLabel('Contraseña actual').fill(PASSWORD);
   await page.getByLabel('Contraseña nueva', { exact: true }).fill('corta');
   await page.getByLabel('Repite la contraseña nueva').fill('corta');

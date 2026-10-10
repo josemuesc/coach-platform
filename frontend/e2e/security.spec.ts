@@ -40,6 +40,7 @@ test('signing in and moving around breaks no policy and talks only to the app an
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page).toHaveURL(/\/coach$/);
   await page.getByRole('link', { name: 'Ajustes' }).click();
+  await page.getByRole('link', { name: /^Cuenta/ }).click();
   await expect(page.getByRole('heading', { name: 'Cuenta' })).toBeVisible();
 
   expect(await violations(page)).toEqual([]);

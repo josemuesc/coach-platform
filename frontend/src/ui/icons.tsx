@@ -60,3 +60,13 @@ export const CrossIcon = () => (
     <path d="M6 6l12 12M18 6L6 18" />
   </Icon>
 );
+export const ChevronLeftIcon = () => (
+  <Icon>
+    <path d="M14.5 6l-6 6 6 6" />
+  </Icon>
+);
+export const ChevronRightIcon = () => (
+  <Icon>
+    <path d="M9.5 6l6 6-6 6" />
+  </Icon>
+);

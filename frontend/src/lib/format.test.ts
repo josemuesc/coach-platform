@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  addDays,
   bogotaDay,
+  dayOfWeekName,
+  hhmmLabel,
+  instantAt,
+  longDay,
+  mondayOf,
+  monthYearHeader,
+  shortDay,
+  weekRange,
   formatCop,
   formatDayMonth,
   formatDayMonthTime,
@@ -94,5 +103,46 @@ describe('WhatsApp link', () => {
   it('puts the message in the link, encoded, and nothing else about the person', () => {
     const url = whatsappLink('3001234567', invitationMessage('Marta', 'Laura Fit', 'https://app.test/invite/tok'));
     expect(decodeURIComponent(url.split('text=')[1] ?? '')).toBe('Hola Marta, Laura Fit te invita a crear tu cuenta: https://app.test/invite/tok');
+  });
+});
+
+describe('the week of the calendar', () => {
+  it('moves days by calendar arithmetic across month and year ends', () => {
+    expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
+    expect(addDays('2026-01-01', -1)).toBe('2025-12-31');
+    expect(addDays('2028-02-28', 1)).toBe('2028-02-29');
+  });
+
+  it('finds the Monday of any day of the week, Sunday included', () => {
+    expect(mondayOf('2026-10-09')).toBe('2026-10-05');   // Friday
+    expect(mondayOf('2026-10-05')).toBe('2026-10-05');   // Monday
+    expect(mondayOf('2026-10-11')).toBe('2026-10-05');   // Sunday belongs to the week that started on Monday the 5th
+    expect(mondayOf('2026-10-12')).toBe('2026-10-12');
+  });
+
+  it('words days and weeks in Spanish', () => {
+    expect(monthYearHeader('2026-10-09')).toBe('OCTUBRE 2026');
+    expect(longDay('2026-10-09')).toBe('Viernes 9 de octubre');
+    expect(shortDay('2026-10-09')).toBe('vie 9 oct');
+    expect(weekRange('2026-10-05')).toBe('5 – 11 oct');
+    expect(weekRange('2026-10-26')).toBe('26 oct – 1 nov');
+    expect(dayOfWeekName(1)).toBe('Lunes');
+    expect(dayOfWeekName(7)).toBe('Domingo');
+  });
+});
+
+describe('times of the day', () => {
+  it('writes the coach\'s hours the way they say them', () => {
+    expect(hhmmLabel('06:00')).toBe('6:00 a. m.');
+    expect(hhmmLabel('12:00')).toBe('12:00 m.');
+    expect(hhmmLabel('12:30')).toBe('12:30 p. m.');
+    expect(hhmmLabel('16:15')).toBe('4:15 p. m.');
+    expect(hhmmLabel('00:00')).toBe('12:00 a. m.');
+    expect(hhmmLabel('23:45')).toBe('11:45 p. m.');
+  });
+
+  it('serializes a Bogota day and time as the instant the API takes', () => {
+    expect(instantAt('2026-10-10', '15:00')).toBe('2026-10-10T20:00:00.000Z');
+    expect(instantAt('2026-10-10', '00:00')).toBe('2026-10-10T05:00:00.000Z');
   });
 });
