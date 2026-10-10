@@ -325,6 +325,10 @@
       },
       "BoardCounts" : {
         "properties" : {
+          "active" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "all" : {
             "format" : "int32",
             "type" : "integer"
@@ -333,21 +337,20 @@
             "format" : "int32",
             "type" : "integer"
           },
-          "minors" : {
-            "format" : "int32",
-            "type" : "integer"
-          },
-          "noPlan" : {
+          "inactive" : {
             "format" : "int32",
             "type" : "integer"
           }
         },
-        "required" : [ "all", "expiring", "minors", "noPlan" ],
+        "required" : [ "active", "all", "expiring", "inactive" ],
         "type" : "object"
       },
       "BoardRow" : {
         "properties" : {
           "active" : {
+            "type" : "boolean"
+          },
+          "activeCycle" : {
             "type" : "boolean"
           },
           "classesIncluded" : {
@@ -382,7 +385,7 @@
           "minor" : {
             "type" : "boolean"
           },
-          "noPlan" : {
+          "needsRenewal" : {
             "type" : "boolean"
           },
           "pendingMarks" : {
@@ -394,7 +397,7 @@
             "type" : [ "string", "null" ]
           },
           "status" : {
-            "enum" : [ "SUSPENDIDO", "SIN_ACTIVAR", "SIN_PLAN", "POR_VENCER", "AL_DIA" ],
+            "enum" : [ "SUSPENDIDO", "SIN_ACTIVAR", "SIN_CLASES", "VENCIDO", "SIN_PLAN", "POR_VENCER", "AL_DIA" ],
             "type" : "string"
           },
           "studentId" : {
@@ -402,7 +405,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "active", "expiringSoon", "fullName", "hasAccount", "minor", "noPlan", "pendingMarks", "status", "studentId" ],
+        "required" : [ "active", "activeCycle", "expiringSoon", "fullName", "hasAccount", "minor", "needsRenewal", "pendingMarks", "status", "studentId" ],
         "type" : "object"
       },
       "BookCommand" : {
@@ -845,6 +848,25 @@
           }
         },
         "required" : [ "classesIncluded", "classesLost", "classesRemaining", "classesUsed", "endDate", "id", "modality", "originalEndDate", "pendingMarks", "planId", "startDate", "status", "studentId" ],
+        "type" : "object"
+      },
+      "EmergencyContactView" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "phone" : {
+            "type" : "string"
+          },
+          "relationship" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "phone", "relationship", "updatedAt" ],
         "type" : "object"
       },
       "EventCancelResult" : {
@@ -1625,6 +1647,13 @@
           },
           "cycle" : {
             "$ref" : "#/components/schemas/CycleOverview"
+          },
+          "emergencyContact" : {
+            "oneOf" : [ {
+              "$ref" : "#/components/schemas/EmergencyContactView"
+            }, {
+              "type" : "null"
+            } ]
           },
           "student" : {
             "$ref" : "#/components/schemas/StudentSummary"

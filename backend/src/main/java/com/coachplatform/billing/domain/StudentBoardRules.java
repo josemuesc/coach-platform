@@ -8,8 +8,8 @@ import java.time.temporal.ChronoUnit;
 
 /**
  * Classifies a student for the coach's board from their LATEST cycle (as it stands today). Pure: the caller passes today (Bogota) and
- * the coach's thresholds. A COMPLETED cycle (every class used, possibly before its deadline) is "about to expire by CLASSES": the student
- * has nothing left and needs to renew. An expired or missing cycle is "no plan".
+ * the coach's thresholds. "Active" means a cycle that is ACTIVE: a COMPLETED one (every class used, even before its deadline) or an
+ * EXPIRED one is NOT active, it is something to renew.
  */
 public final class StudentBoardRules {
 
@@ -21,38 +21,43 @@ public final class StudentBoardRules {
     }
 
     /** @param daysUntilEnd only for an ACTIVE cycle; null otherwise */
-    public record Classification(BoardStatus status, boolean expiringSoon, boolean noPlan, ExpiringBy expiringBy, Integer daysUntilEnd) {
+    public record Classification(BoardStatus status, boolean activeCycle, boolean expiringSoon, boolean needsRenewal, ExpiringBy expiringBy,
+                                 Integer daysUntilEnd) {
     }
 
     /**
-     * @param latest         the latest cycle, or null when the student never paid
-     * @param expiringDays   "few days": at most this many days left
-     * @param expiringClasses "few classes": at most this many classes left
+     * @param latest          the latest cycle, or null when the student never paid
+     * @param expiringDays    "few days": at most this many days left (inclusive)
+     * @param expiringClasses "few classes": at most this many classes left (inclusive)
      */
     public static Classification classify(boolean active, boolean hasAccount, LatestCycle latest, LocalDate today, int expiringDays,
                                           int expiringClasses) {
-        boolean noPlan = latest == null || latest.status() == CycleStatus.EXPIRED;
-        boolean expiringSoon = false;
-        ExpiringBy by = null;
-        Integer days = null;
-        if (!noPlan && latest.status() == CycleStatus.COMPLETED) {
-            expiringSoon = true;
-            by = ExpiringBy.CLASSES;
-        } else if (!noPlan) {
-            days = (int) ChronoUnit.DAYS.between(today, latest.endDate());
-            boolean byDays = days <= expiringDays;
-            boolean byClasses = latest.classesRemaining() <= expiringClasses;
-            expiringSoon = byDays || byClasses;
-            by = byDays && byClasses ? ExpiringBy.BOTH : byDays ? ExpiringBy.DAYS : byClasses ? ExpiringBy.CLASSES : null;
-        }
+        CycleStatus cycle = latest == null ? null : latest.status();
+        Integer days = cycle == CycleStatus.ACTIVE ? (int) ChronoUnit.DAYS.between(today, latest.endDate()) : null;
+        boolean byDays = days != null && days <= expiringDays;
+        boolean byClasses = cycle == CycleStatus.ACTIVE && latest.classesRemaining() <= expiringClasses;
+
         if (!active) {
-            // out of every filter: a suspended student is listed, but belongs to none of the buckets
-            return new Classification(BoardStatus.SUSPENDIDO, false, false, null, days);
+            // out of every bucket: a suspended student is listed (as inactive), whatever their cycle says
+            return new Classification(BoardStatus.SUSPENDIDO, false, false, false, null, days);
         }
-        BoardStatus status = !hasAccount ? BoardStatus.SIN_ACTIVAR
-                : noPlan ? BoardStatus.SIN_PLAN
-                : expiringSoon ? BoardStatus.POR_VENCER
-                : BoardStatus.AL_DIA;
-        return new Classification(status, expiringSoon, noPlan, by, days);
+        boolean activeCycle = cycle == CycleStatus.ACTIVE;
+        boolean expiringSoon = activeCycle && (byDays || byClasses);
+        ExpiringBy by = !expiringSoon ? null : byDays && byClasses ? ExpiringBy.BOTH : byDays ? ExpiringBy.DAYS : ExpiringBy.CLASSES;
+        boolean needsRenewal = cycle == CycleStatus.COMPLETED || cycle == CycleStatus.EXPIRED;
+
+        BoardStatus status;
+        if (!hasAccount) {
+            status = BoardStatus.SIN_ACTIVAR;
+        } else if (cycle == CycleStatus.COMPLETED) {
+            status = BoardStatus.SIN_CLASES;
+        } else if (cycle == CycleStatus.EXPIRED) {
+            status = BoardStatus.VENCIDO;
+        } else if (cycle == null) {
+            status = BoardStatus.SIN_PLAN;
+        } else {
+            status = expiringSoon ? BoardStatus.POR_VENCER : BoardStatus.AL_DIA;
+        }
+        return new Classification(status, activeCycle, expiringSoon, needsRenewal, by, days);
     }
 }

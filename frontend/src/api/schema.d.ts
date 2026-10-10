@@ -965,16 +965,17 @@ export interface components {
         };
         BoardCounts: {
             /** Format: int32 */
+            active: number;
+            /** Format: int32 */
             all: number;
             /** Format: int32 */
             expiring: number;
             /** Format: int32 */
-            minors: number;
-            /** Format: int32 */
-            noPlan: number;
+            inactive: number;
         };
         BoardRow: {
             active: boolean;
+            activeCycle: boolean;
             /** Format: int32 */
             classesIncluded?: number | null;
             /** Format: int32 */
@@ -989,13 +990,13 @@ export interface components {
             fullName: string;
             hasAccount: boolean;
             minor: boolean;
-            noPlan: boolean;
+            needsRenewal: boolean;
             /** Format: int32 */
             pendingMarks: number;
             /** @enum {string|null} */
             planModality?: "PERSONALIZED" | "SEMI_PERSONALIZED" | null;
             /** @enum {string} */
-            status: "SUSPENDIDO" | "SIN_ACTIVAR" | "SIN_PLAN" | "POR_VENCER" | "AL_DIA";
+            status: "SUSPENDIDO" | "SIN_ACTIVAR" | "SIN_CLASES" | "VENCIDO" | "SIN_PLAN" | "POR_VENCER" | "AL_DIA";
             /** Format: uuid */
             studentId: string;
         };
@@ -1156,6 +1157,13 @@ export interface components {
             status: "ACTIVE" | "COMPLETED" | "EXPIRED";
             /** Format: uuid */
             studentId: string;
+        };
+        EmergencyContactView: {
+            name: string;
+            phone: string;
+            relationship: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         EventCancelResult: {
             affectedStudents: components["schemas"]["AffectedStudent"][];
@@ -1441,6 +1449,7 @@ export interface components {
             account: components["schemas"]["StudentAccountView"];
             consents: components["schemas"]["StudentConsentsView"];
             cycle: components["schemas"]["CycleOverview"];
+            emergencyContact?: components["schemas"]["EmergencyContactView"] | null;
             student: components["schemas"]["StudentSummary"];
             upcoming: components["schemas"]["UpcomingClass"][];
         };

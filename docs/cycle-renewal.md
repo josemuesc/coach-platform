@@ -23,8 +23,20 @@ Con ciclo activo y fecha límite todavía por llegar: `409 ACTIVE_CYCLE_EXISTS`.
 Se puede extender el ÚLTIMO ciclo si está activo, o reabrirlo si venció y es el último y no cerró `COMPLETED`. Desde el día siguiente a su fecha límite (hoy, como mínimo, al reabrir) hasta la fecha límite ORIGINAL más `max_extension_days` del entrenador. Si ya no queda margen, `canExtendCycle` es falso.
 
 ## Tablero (`GET /api/coach/students/board`)
-Un chip por alumno, precedencia: `SUSPENDIDO` > `SIN_ACTIVAR` > `SIN_PLAN` > `POR_VENCER` > `AL_DIA`. `POR_VENCER` lleva `expiringBy`:
-- `DAYS`: quedan pocos días (`expiring_soon_days`, 5 por defecto, inclusive). Texto: «Vence en N días» (0: «Vence hoy»).
-- `CLASSES`: quedan pocas clases (`expiring_soon_classes`, 1 por defecto) o NINGUNA (ciclo `COMPLETED`). Texto: «Le queda 1 clase» / «Le quedan N clases» / «Sin clases» (0).
-- `BOTH`: las dos cosas. Texto: «Vence en N días» (la más urgente; las clases ya salen en el subtítulo).
-`SIN_PLAN` = nunca pagó o el último ciclo venció. Los filtros del cliente usan `expiringSoon`, `noPlan` y `minor` junto con `active` (los conteos son de alumnos activos; un suspendido se lista al final y no cuenta en ningún filtro).
+Filtros (conteos del servidor, `counts = {all, expiring, active, inactive}`; `all = active + inactive`):
+- **Activos** (`activeCycle`): alumno no suspendido cuyo ÚLTIMO ciclo está `ACTIVE`.
+- **Por vencer** (`expiringSoon`): subconjunto de Activos con pocos días (`expiring_soon_days`, 5 por defecto, inclusive) o pocas clases (`expiring_soon_classes`, 1 por defecto, inclusive). Un ciclo agotado (`COMPLETED`) NO es activo, así que no entra aquí.
+- **Inactivos** (`!activeCycle`): nunca pagó, ciclo vencido, ciclo agotado o alumno suspendido.
+- **Todos**: todos los alumnos listados, suspendidos incluidos.
+
+Chip de la fila (uno por alumno; precedencia): `SUSPENDIDO` > `SIN_ACTIVAR` (invitación sin aceptar) > por el último ciclo: `SIN_CLASES` («Sin clases · renovar», ciclo `COMPLETED`), `VENCIDO` («Vencido · renovar», ciclo `EXPIRED`), `SIN_PLAN` (nunca pagó), `POR_VENCER`, `AL_DIA`. Las banderas no dependen del chip (un `SIN_ACTIVAR` con ciclo activo sigue contando en Activos).
+
+`POR_VENCER` lleva `expiringBy`:
+- `DAYS`: pocos días. Texto: «Vence en N días» (0: «Vence hoy»).
+- `CLASSES`: pocas clases. Texto: «Le queda 1 clase» / «Le quedan N clases».
+- `BOTH`: las dos. Texto: «Vence en N días» (la más urgente; las clases salen en el subtítulo).
+
+`needsRenewal` (no suspendido, último ciclo `COMPLETED` o `EXPIRED`) marca «renovar». Orden de las filas: primero los activos por nombre; luego los inactivos: los que hay que renovar, después el resto (sin plan, sin activar sin ciclo), y al final los suspendidos, cada grupo por nombre. Una fila lleva siempre los datos de su ÚLTIMO ciclo (modalidad, clases, fecha límite) aunque no esté activo; solo `daysUntilEnd` es exclusivo del ciclo activo.
+
+## Un ciclo vigente no cambia de plan ni de modalidad
+No existe ningún camino que cambie el plan, la modalidad ni las clases incluidas de un ciclo: el ciclo guarda una COPIA al abrirse (`plan_id`, `modality`, `classes_included` son `updatable = false` y solo el constructor los fija); el pago solo abre ciclos nuevos; editar o desactivar un plan solo afecta a los pagos futuros. La modalidad solo puede cambiar al renovar, es decir, cuando el ciclo terminó por fecha o por clases (o el mismo día de `end_date`, con el conflicto de modalidad explicado en `docs/error-codes.md`). Probado en `BoardAndProfileTest` (se edita todo el plan y se desactiva: el ciclo conserva modalidad y clases, y el alumno sigue agendando y marcando). El nombre del plan que muestra el perfil es el nombre ACTUAL del plan (solo una etiqueta).

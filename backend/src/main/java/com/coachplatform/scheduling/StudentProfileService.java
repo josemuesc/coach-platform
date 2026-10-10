@@ -52,7 +52,7 @@ public class StudentProfileService {
     public StudentProfile of(UUID studentId) {
         var student = students.get(studentId);                       // 404 for a student of another tenant
         return new StudentProfile(student, accounts.of(studentId), billing.cycleOverview(studentId), upcoming(studentId),
-                consents.forStudent(studentId));
+                consents.forStudent(studentId), null);   // emergency contact: step 5
     }
 
     private List<UpcomingClass> upcoming(UUID studentId) {

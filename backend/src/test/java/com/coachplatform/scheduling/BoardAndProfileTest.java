@@ -82,46 +82,56 @@ class BoardAndProfileTest extends SchedulingApiTest {
         mark(coach, danisClass, "ATTENDED").andExpect(status().isOk());                          // Dani: 1 of 1 used -> COMPLETED
         String board = board(coach);
 
+        // active cycles by name; then the inactive: to renew first (Dani: all classes used), then the rest, the suspended one last
         assertThat(JsonPath.<List<String>>read(board, "$.students[*].fullName"))
-                .as("by name, the suspended one last").containsExactly("Ana", "Beto", "Cata", "Dani", "Enzo", "Fabi", "Ila", "Mateo", "Gus");
-        assertThat(JsonPath.<Integer>read(board, "$.counts.all")).as("active students only").isEqualTo(8);
-        assertThat(JsonPath.<Integer>read(board, "$.counts.expiring")).isEqualTo(4);               // Beto, Cata, Dani, Ila
-        assertThat(JsonPath.<Integer>read(board, "$.counts.noPlan")).isEqualTo(1);                 // Enzo
-        assertThat(JsonPath.<Integer>read(board, "$.counts.minors")).isEqualTo(1);                 // Mateo
+                .containsExactly("Ana", "Beto", "Cata", "Fabi", "Ila", "Mateo", "Dani", "Enzo", "Gus");
+        assertThat(JsonPath.<Integer>read(board, "$.counts.all")).as("every student listed, suspended included").isEqualTo(9);
+        assertThat(JsonPath.<Integer>read(board, "$.counts.active")).as("with an ACTIVE cycle").isEqualTo(6);       // Ana Beto Cata Fabi Ila Mateo
+        assertThat(JsonPath.<Integer>read(board, "$.counts.expiring")).as("a subset of active").isEqualTo(3);       // Beto Cata Ila
+        assertThat(JsonPath.<Integer>read(board, "$.counts.inactive")).isEqualTo(3);                                // Dani Enzo Gus
+        assertThat(JsonPath.<Integer>read(board, "$.counts.all")).isEqualTo(JsonPath.<Integer>read(board, "$.counts.active") + JsonPath.<Integer>read(board, "$.counts.inactive"));
 
         assertThat(this.<String>row(board, "Ana", "status")).isEqualTo("AL_DIA");
+        assertThat(this.<Boolean>row(board, "Ana", "activeCycle")).isTrue();
         assertThat(this.<Object>row(board, "Ana", "expiringBy")).as("null unless about to expire").isNull();
         assertThat(this.<Integer>row(board, "Ana", "daysUntilEnd")).isEqualTo(19);
         assertThat(this.<String>row(board, "Beto", "status")).isEqualTo("POR_VENCER");
+        assertThat(this.<Boolean>row(board, "Beto", "expiringSoon")).isTrue();
         assertThat(this.<String>row(board, "Beto", "expiringBy")).isEqualTo("DAYS");
         assertThat(this.<Integer>row(board, "Beto", "daysUntilEnd")).isEqualTo(5);
         assertThat(this.<String>row(board, "Cata", "expiringBy")).isEqualTo("CLASSES");
         assertThat(this.<Integer>row(board, "Cata", "classesRemaining")).isEqualTo(1);
         assertThat(this.<String>row(board, "Ila", "expiringBy")).isEqualTo("BOTH");
-        // COMPLETED before its deadline: "about to expire by classes", no classes left, no days to count
-        assertThat(this.<String>row(board, "Dani", "status")).isEqualTo("POR_VENCER");
-        assertThat(this.<String>row(board, "Dani", "expiringBy")).isEqualTo("CLASSES");
+        // all classes used before the deadline: NOT active, not "expiring": "Sin clases · renovar"
+        assertThat(this.<String>row(board, "Dani", "status")).isEqualTo("SIN_CLASES");
+        assertThat(this.<Boolean>row(board, "Dani", "activeCycle")).isFalse();
+        assertThat(this.<Boolean>row(board, "Dani", "expiringSoon")).isFalse();
+        assertThat(this.<Boolean>row(board, "Dani", "needsRenewal")).isTrue();
+        assertThat(this.<Object>row(board, "Dani", "expiringBy")).isNull();
         assertThat(this.<Integer>row(board, "Dani", "classesRemaining")).isZero();
         assertThat(this.<Object>row(board, "Dani", "daysUntilEnd")).isNull();
-        assertThat(this.<String>row(board, "Dani", "planModality")).isEqualTo("PERSONALIZED");
-        // no plan: everything about the cycle is null, never zero
+        assertThat(this.<String>row(board, "Dani", "planModality")).as("the last cycle's modality is still shown").isEqualTo("PERSONALIZED");
+        // never paid: inactive, nothing to renew, every cycle field null (never zero)
         assertThat(this.<String>row(board, "Enzo", "status")).isEqualTo("SIN_PLAN");
-        assertThat(this.<Boolean>row(board, "Enzo", "noPlan")).isTrue();
+        assertThat(this.<Boolean>row(board, "Enzo", "activeCycle")).isFalse();
+        assertThat(this.<Boolean>row(board, "Enzo", "needsRenewal")).isFalse();
         for (String field : List.of("expiringBy", "planModality", "classesIncluded", "classesRemaining", "endDate", "daysUntilEnd")) {
             assertThat(this.<Object>row(board, "Enzo", field)).as("Enzo." + field).isNull();
         }
         assertThat(this.<Integer>row(board, "Enzo", "pendingMarks")).isZero();
-        // not activated beats everything below it, but the minor flag and the plan are still there
+        // not activated hides the cycle in the chip, but the student still has an active cycle for the filters
         assertThat(this.<String>row(board, "Fabi", "status")).isEqualTo("SIN_ACTIVAR");
         assertThat(this.<Boolean>row(board, "Fabi", "hasAccount")).isFalse();
+        assertThat(this.<Boolean>row(board, "Fabi", "activeCycle")).isTrue();
         assertThat(this.<String>row(board, "Mateo", "status")).isEqualTo("SIN_ACTIVAR");
         assertThat(this.<Boolean>row(board, "Mateo", "minor")).isTrue();
         assertThat(this.<String>row(board, "Mateo", "planModality")).isEqualTo("PERSONALIZED");
-        // suspended: its own chip, out of every bucket
+        // suspended: its own chip, inactive, in no other bucket, last
         assertThat(this.<String>row(board, "Gus", "status")).isEqualTo("SUSPENDIDO");
         assertThat(this.<Boolean>row(board, "Gus", "active")).isFalse();
+        assertThat(this.<Boolean>row(board, "Gus", "activeCycle")).isFalse();
         assertThat(this.<Boolean>row(board, "Gus", "expiringSoon")).isFalse();
-        assertThat(this.<Boolean>row(board, "Gus", "noPlan")).isFalse();
+        assertThat(this.<Boolean>row(board, "Gus", "needsRenewal")).isFalse();
     }
 
     @Test
@@ -132,10 +142,11 @@ class BoardAndProfileTest extends SchedulingApiTest {
         String board = board(other);
         assertThat(JsonPath.<List<Object>>read(board, "$.students")).isEmpty();
         assertThat(JsonPath.<Integer>read(board, "$.counts.all")).isZero();
+        assertThat(JsonPath.<Integer>read(board, "$.counts.inactive")).isZero();
     }
 
     @Test
-    void anExpiredCycleIsNoPlanAndAnOverdueOneWithUnmarkedClassesStaysAboutToExpire() throws Exception {
+    void anExpiredCycleIsVencidoAndAnOverdueOneWithUnmarkedClassesStaysAboutToExpire() throws Exception {
         var coach = newCoach(8);
         goTo("2026-10-06", "09:00");
         var ana = personalized(coach, "Ana");
@@ -143,13 +154,15 @@ class BoardAndProfileTest extends SchedulingApiTest {
         String betosClass = attendanceId(studentBooked(beto, at("2026-11-05", "10:00")));
         goTo("2026-11-09", "09:00");                                  // both are 3 days past the deadline; Beto's class was never marked
         String board = board(coach);
-        assertThat(this.<String>row(board, "Ana", "status")).isEqualTo("SIN_PLAN");
-        assertThat(this.<Object>row(board, "Ana", "classesRemaining")).isNull();
+        assertThat(this.<String>row(board, "Ana", "status")).isEqualTo("VENCIDO");
+        assertThat(this.<Boolean>row(board, "Ana", "needsRenewal")).isTrue();
+        assertThat(this.<Integer>row(board, "Ana", "classesRemaining")).as("the classes she lost").isEqualTo(8);
+        assertThat(this.<Object>row(board, "Ana", "daysUntilEnd")).isNull();
         assertThat(this.<String>row(board, "Beto", "status")).as("held open by its unmarked class").isEqualTo("POR_VENCER");
         assertThat(this.<Integer>row(board, "Beto", "daysUntilEnd")).isEqualTo(-3);
         assertThat(this.<Integer>row(board, "Beto", "pendingMarks")).isEqualTo(1);
         mark(coach, betosClass, "ATTENDED").andExpect(status().isOk());
-        assertThat(this.<String>row(board(coach), "Beto", "status")).isEqualTo("SIN_PLAN");
+        assertThat(this.<String>row(board(coach), "Beto", "status")).isEqualTo("VENCIDO");
     }
 
     // ================================================================= the profile
@@ -179,6 +192,7 @@ class BoardAndProfileTest extends SchedulingApiTest {
         assertThat(JsonPath.<Object>read(p, "$.account.openResetLinkUntil")).isNull();
         assertThat(JsonPath.<List<Object>>read(p, "$.upcoming")).isEmpty();
         assertThat(JsonPath.<List<String>>read(p, "$.consents.consents[*].type")).isNotEmpty();
+        assertThat(JsonPath.<java.util.Map<String, Object>>read(p, "$")).as("the field exists and is null until step 5").containsEntry("emergencyContact", null);
     }
 
     @Test
@@ -325,5 +339,45 @@ class BoardAndProfileTest extends SchedulingApiTest {
         pay(coach.token(), laura.id(), coach.personalizedPlan(), ",\"reference\":\"M1234567\"");
         mvc.perform(withToken(get("/api/coach/students/" + laura.id() + "/profile"), coach.token())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.cycle.lastPayment.reference").value("M1234567")).andExpect(jsonPath("$.cycle.lastPayment.method").value("NEQUI"));
+    }
+
+    // ================================================================= a running cycle is never touched by its plan
+
+    @Test
+    void aRunningCycleKeepsItsModalityAndClassesWhateverHappensToItsPlan() throws Exception {
+        var coach = newCoach(8);
+        goTo("2026-10-06", "06:00");
+        String plan = createPlan(coach.token(), "Plan base", 8, 520_000, "PERSONALIZED");
+        var ana = withCycle(coach, newStudent(coach, "Ana"), plan);
+        String before = json(mvc.perform(withToken(get("/api/coach/students/" + ana.id() + "/cycles/active"), coach.token())).andReturn());
+
+        // edit EVERYTHING about the plan, then deactivate it
+        mvc.perform(withToken(put("/api/coach/plans/" + plan), coach.token()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Plan renombrado\",\"classesIncluded\":2,\"priceCop\":999000,\"modality\":\"SEMI_PERSONALIZED\"}")).andExpect(status().isOk());
+        mvc.perform(withToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/coach/plans/" + plan + "/active"), coach.token())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}")).andExpect(status().isOk());
+
+        String after = json(mvc.perform(withToken(get("/api/coach/students/" + ana.id() + "/cycles/active"), coach.token())).andExpect(status().isOk()).andReturn());
+        for (String field : List.of("modality", "classesIncluded", "planId", "startDate", "endDate", "originalEndDate", "classesUsed", "status")) {
+            assertThat(JsonPath.<Object>read(after, "$." + field)).as("cycle." + field).isEqualTo(JsonPath.<Object>read(before, "$." + field));
+        }
+        assertThat(JsonPath.<String>read(after, "$.modality")).isEqualTo("PERSONALIZED");
+        assertThat(JsonPath.<Integer>read(after, "$.classesIncluded")).isEqualTo(8);
+
+        // and the student keeps living on it: a PERSONALIZED class beyond the plan's new 2 classes can still be booked and marked
+        for (int day = 7; day <= 11; day++) {
+            studentBooked(ana, at("2026-10-" + String.format("%02d", day), "10:00"));
+        }
+        assertThat(JsonPath.<List<String>>read(studentSessions(ana), "$[*].modality")).hasSize(5).containsOnly("PERSONALIZED");
+        goTo("2026-10-07", "11:00");
+        mark(coach, JsonPath.<List<String>>read(studentSessions(ana), "$[?(@.startsAt=='" + at("2026-10-07", "10:00") + "')].id").get(0), "ATTENDED").andExpect(status().isOk());
+        assertThat(classesUsed(coach, ana)).isEqualTo(1);
+        // the profile still shows the cycle's own numbers (the plan's name is the plan's CURRENT name: it is only a label)
+        String p = profile(coach, ana.id());
+        assertThat(JsonPath.<Integer>read(p, "$.cycle.cycle.classesIncluded")).isEqualTo(8);
+        assertThat(JsonPath.<String>read(p, "$.cycle.cycle.modality")).isEqualTo("PERSONALIZED");
+        // an inactive plan cannot be sold again
+        var resale = pay(coach.token(), ana.id(), plan, "");
+        assertThat(resale.getResponse().getStatus()).isGreaterThanOrEqualTo(400);
     }
 }

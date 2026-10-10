@@ -257,7 +257,7 @@ public class BillingService {
 
     /**
      * The coach's board: every student with the state of their LATEST cycle, classified by {@link StudentBoardRules}, with the counts of
-     * the filter chips (active students only). By name; suspended students are listed last.
+     * the filters. Order: active cycles by name; then the inactive ones: to renew first, the rest, suspended last (each group by name).
      */
     @Transactional(readOnly = true)
     public StudentBoard board() {
@@ -267,26 +267,31 @@ public class BillingService {
         }
         var today = calendar.today();
         BillingSettings settings = coaches.billingSettings(TenantContext.get());
-        List<BoardRow> listed = new ArrayList<>();
+        List<BoardRow> withCycle = new ArrayList<>();
+        List<BoardRow> toRenew = new ArrayList<>();
+        List<BoardRow> others = new ArrayList<>();
         List<BoardRow> suspended = new ArrayList<>();
-        for (StudentSummary s : students.list()) {
+        for (StudentSummary s : students.list()) {                                         // already by name
             Cycle cycle = latest.get(s.id());
             CycleSummary summary = cycle == null ? null : toSummary(cycle);
             var latestCycle = summary == null ? null
                     : new StudentBoardRules.LatestCycle(summary.status(), summary.classesRemaining(), summary.endDate());
             var c = StudentBoardRules.classify(s.active(), s.hasAccount(), latestCycle, today, settings.expiringSoonDays(),
                     settings.expiringSoonClasses());
-            boolean hasPlan = summary != null && summary.status() != CycleStatus.EXPIRED;
-            BoardRow item = new BoardRow(s.id(), s.fullName(), s.minor(), s.hasAccount(), s.active(), c.status(), c.expiringSoon(),
-                    c.noPlan(), c.expiringBy(), hasPlan ? summary.modality() : null, hasPlan ? summary.classesIncluded() : null,
-                    hasPlan ? summary.classesRemaining() : null, hasPlan ? summary.endDate() : null, c.daysUntilEnd(),
-                    summary == null ? 0 : summary.pendingMarks());
-            (s.active() ? listed : suspended).add(item);
+            BoardRow row = new BoardRow(s.id(), s.fullName(), s.minor(), s.hasAccount(), s.active(), c.status(), c.activeCycle(),
+                    c.expiringSoon(), c.needsRenewal(), c.expiringBy(), summary == null ? null : summary.modality(),
+                    summary == null ? null : summary.classesIncluded(), summary == null ? null : summary.classesRemaining(),
+                    summary == null ? null : summary.endDate(), c.daysUntilEnd(), summary == null ? 0 : summary.pendingMarks());
+            (c.activeCycle() ? withCycle : !s.active() ? suspended : c.needsRenewal() ? toRenew : others).add(row);
         }
-        BoardCounts counts = new BoardCounts(listed.size(), (int) listed.stream().filter(BoardRow::expiringSoon).count(),
-                (int) listed.stream().filter(BoardRow::noPlan).count(), (int) listed.stream().filter(BoardRow::minor).count());
-        listed.addAll(suspended);
-        return new StudentBoard(counts, listed);
+        int active = withCycle.size();
+        int inactive = toRenew.size() + others.size() + suspended.size();
+        BoardCounts counts = new BoardCounts(active + inactive, (int) withCycle.stream().filter(BoardRow::expiringSoon).count(), active, inactive);
+        List<BoardRow> ordered = new ArrayList<>(withCycle);
+        ordered.addAll(toRenew);
+        ordered.addAll(others);
+        ordered.addAll(suspended);
+        return new StudentBoard(counts, ordered);
     }
 
     /**
