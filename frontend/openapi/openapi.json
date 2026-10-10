@@ -1234,6 +1234,9 @@
             "enum" : [ "PAST", "NOW", "UPCOMING" ],
             "type" : "string"
           },
+          "shared" : {
+            "type" : "boolean"
+          },
           "startsAt" : {
             "format" : "date-time",
             "type" : "string"
@@ -1243,7 +1246,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "attendees", "canShowQr", "capacity", "endsAt", "freeSeats", "id", "modality", "occupied", "phase", "startsAt", "status" ],
+        "required" : [ "attendees", "canShowQr", "capacity", "endsAt", "freeSeats", "id", "modality", "occupied", "phase", "shared", "startsAt", "status" ],
         "type" : "object"
       },
       "ExtendCycleCommand" : {

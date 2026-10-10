@@ -64,7 +64,8 @@ public final class SlotCatalog {
                         null, false, null);
             }
             EventInfo event = overlapping.get(0);
-            if (overlapping.size() > 1 || !event.range().equals(slot) || studentEventIds.contains(event.id())) {
+            if (overlapping.size() > 1 || !event.range().equals(slot) || studentEventIds.contains(event.id())
+                    || (event.occupied() >= event.capacity() && event.occupied() >= BookingRules.maxOccupancy(event.capacity()))) {
                 return null;
             }
             SchedulingRuleException.Code violation = null;

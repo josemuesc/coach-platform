@@ -11,6 +11,7 @@ import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.N
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.OUTSIDE_CYCLE;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.QUOTA_EXCEEDED;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.REASON_REQUIRED;
+import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.SHARED_LIMIT_EXCEEDED;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.SLOT_TAKEN;
 import static com.coachplatform.scheduling.domain.SchedulingRuleException.Code.TOO_SOON;
 
@@ -84,6 +85,14 @@ public final class BookingRules {
     /** The capacity a NEW event of this modality gets. Personalized is always 1; semi takes the coach's current default. */
     public static int capacityForNewEvent(Modality modality, int defaultGroupCapacity) {
         return modality == Modality.PERSONALIZED ? 1 : defaultGroupCapacity;
+    }
+
+    /** An override may put people over an event's capacity, but never more than this many in total: capacity + 2, at most 10. */
+    public static final int MAX_OVERBOOK = 2;
+    public static final int MAX_OCCUPANCY = 10;
+
+    public static int maxOccupancy(int capacity) {
+        return Math.min(capacity + MAX_OVERBOOK, MAX_OCCUPANCY);
     }
 
     /** How many more classes the cycle can take: included minus used minus the places already booked (never below 0). */
@@ -163,6 +172,10 @@ public final class BookingRules {
         if (violation != null) {
             if (r.override() == null) {
                 throw new SchedulingRuleException(violation, describe(violation, event));
+            }
+            if (event.occupied() + 1 > maxOccupancy(event.capacity())) {
+                throw new SchedulingRuleException(SHARED_LIMIT_EXCEEDED,
+                        "That class cannot take more than " + maxOccupancy(event.capacity()) + " people, not even as an exception");
             }
             return new Decision(Action.JOIN_EVENT, range, event.modality(), event.capacity(), true);
         }

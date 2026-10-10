@@ -328,4 +328,37 @@ class BookingRulesTest {
         assertThat(codeOf(request(AT, semi, true, false, List.of(), List.of(event(Modality.SEMI_PERSONALIZED, 4, 4)), null))).isEqualTo(Code.EVENT_FULL);
         assertThat(codeOf(request("2026-11-09T10:00", fullCycle, true, false, List.of(), List.of(), null))).isEqualTo(Code.OUTSIDE_CYCLE);
     }
+
+    // ================================================================= shared classes: the ceiling of an override
+
+    private static Request overrideJoin(Modality studentModality, Modality eventModality, int capacity, int occupied) {
+        return request(AT, cycle(studentModality), false, true, List.of(), List.of(event(eventModality, capacity, occupied)), new Override("Entreno compartido"));
+    }
+
+    @Test
+    void anOverrideMayExceedTheCapacityByTwoNeverMoreAndThePersonalizedCeilingIsThree() {
+        assertThat(decide(overrideJoin(Modality.PERSONALIZED, Modality.PERSONALIZED, 1, 1)).overridden()).as("2nd person").isTrue();
+        assertThat(decide(overrideJoin(Modality.PERSONALIZED, Modality.PERSONALIZED, 1, 2)).overridden()).as("3rd person: the limit").isTrue();
+        assertThat(codeOf(overrideJoin(Modality.PERSONALIZED, Modality.PERSONALIZED, 1, 3))).as("4th person").isEqualTo(Code.SHARED_LIMIT_EXCEEDED);
+    }
+
+    @Test
+    void aSemiPersonalizedClassOfFourTakesUpToSixAndOneOfTenNeverMoreThanTen() {
+        assertThat(decide(overrideJoin(Modality.SEMI_PERSONALIZED, Modality.SEMI_PERSONALIZED, 4, 5)).overridden()).isTrue();
+        assertThat(codeOf(overrideJoin(Modality.SEMI_PERSONALIZED, Modality.SEMI_PERSONALIZED, 4, 6))).isEqualTo(Code.SHARED_LIMIT_EXCEEDED);
+        assertThat(decide(overrideJoin(Modality.SEMI_PERSONALIZED, Modality.SEMI_PERSONALIZED, 9, 9)).overridden()).as("9 + 1 = 10: allowed").isTrue();
+        assertThat(codeOf(overrideJoin(Modality.SEMI_PERSONALIZED, Modality.SEMI_PERSONALIZED, 9, 10))).isEqualTo(Code.SHARED_LIMIT_EXCEEDED);
+        assertThat(codeOf(overrideJoin(Modality.SEMI_PERSONALIZED, Modality.SEMI_PERSONALIZED, 10, 10))).as("absolute maximum").isEqualTo(Code.SHARED_LIMIT_EXCEEDED);
+        assertThat(BookingRules.maxOccupancy(1)).isEqualTo(3);
+        assertThat(BookingRules.maxOccupancy(4)).isEqualTo(6);
+        assertThat(BookingRules.maxOccupancy(10)).isEqualTo(10);
+    }
+
+    @Test
+    void theCeilingAlsoAppliesToAnotherModalityAndNeverChangesWhatAStudentGetsToSee() {
+        assertThat(codeOf(overrideJoin(Modality.SEMI_PERSONALIZED, Modality.PERSONALIZED, 1, 3))).isEqualTo(Code.SHARED_LIMIT_EXCEEDED);
+        // without an override the answer is still the plain rule, not the ceiling
+        var student = request(AT, cycle(Modality.SEMI_PERSONALIZED), true, true, List.of(), List.of(event(Modality.SEMI_PERSONALIZED, 4, 6)), null);
+        assertThat(codeOf(student)).isEqualTo(Code.EVENT_FULL);
+    }
 }

@@ -73,6 +73,7 @@ export const ERRORS = {
   REASON_REQUIRED: { status: 422, message: "Indica el motivo." },
   REGISTRATION_CLOSED: { status: 403, message: "El registro de entrenadores está cerrado." },
   REOPEN_NOT_ALLOWED: { status: 409, message: "Este ciclo no se puede reabrir." },
+  SHARED_LIMIT_EXCEEDED: { status: 409, message: "Esa clase no puede recibir más personas, ni siquiera como excepción (máximo: capacidad + 2, hasta 10 en total)." },
   SLOT_TAKEN: { status: 409, message: "Ese horario ya está ocupado." },
   STUDENT_ALREADY_HAS_ACCOUNT: { status: 409, message: "El alumno ya tiene su cuenta creada." },
   STUDENT_EMAIL_EXISTS: { status: 409, message: "Ya tienes un alumno con ese correo." },

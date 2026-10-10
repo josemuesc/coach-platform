@@ -64,6 +64,7 @@ texto; el mensaje en español de esta tabla es el que se muestra al usuario. Los
 | `QUOTA_EXCEEDED` | 409 | El alumno ya tiene agendadas todas las clases de su ciclo. |
 | `MODALITY_MISMATCH` | 409 | Ese horario es de otra modalidad. |
 | `EVENT_FULL` | 409 | La clase ya está llena. |
+| `SHARED_LIMIT_EXCEEDED` | 409 | Esa clase no puede recibir más personas, ni siquiera como excepción (máximo: capacidad + 2, hasta 10 en total). |
 | `ALREADY_BOOKED` | 409 | El alumno ya está en esa clase. |
 | `EVENT_ALREADY_STARTED` | 409 | La clase ya empezó. |
 | `CAPACITY_NOT_CONFIGURABLE` | 422 | La capacidad de una clase personalizada no se puede cambiar. |

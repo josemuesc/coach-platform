@@ -104,7 +104,7 @@ class SchedulingViews {
             boolean canShowQr = e.getStatus() == EventStatus.SCHEDULED
                     && confirmation.mayIssue(e.getStartsAt(), e.getEndsAt(), settings.qrOpenMinutesBefore(), settings.qrCloseHoursAfterEnd());
             return new EventView(e.getId(), e.getStartsAt(), e.getEndsAt(), e.getModality(), e.getCapacity(), occupied,
-                    Math.max(0, e.getCapacity() - occupied), e.getStatus(), eventRules.phase(e.getStartsAt(), e.getEndsAt()), canShowQr,
+                    Math.max(0, e.getCapacity() - occupied), occupied > e.getCapacity(), e.getStatus(), eventRules.phase(e.getStartsAt(), e.getEndsAt()), canShowQr,
                     attendees);
         }).toList();
     }

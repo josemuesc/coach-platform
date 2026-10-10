@@ -1399,6 +1399,7 @@ export interface components {
             occupied: number;
             /** @enum {string} */
             phase: "PAST" | "NOW" | "UPCOMING";
+            shared: boolean;
             /** Format: date-time */
             startsAt: string;
             /** @enum {string} */

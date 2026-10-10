@@ -31,7 +31,8 @@ public class SchedulingRuleException extends RuntimeException {
         QR_NOT_OPEN_YET,
         QR_WINDOW_CLOSED,
         INVALID_START_TIME,
-        INVALID_BLOCK
+        INVALID_BLOCK,
+        SHARED_LIMIT_EXCEEDED
     }
 
     private final Code code;

@@ -134,4 +134,12 @@ class SlotCatalogTest {
 
         assertThat(slots).extracting(s -> s.range().start()).containsExactly(local("2026-10-13T08:00"));
     }
+
+    @Test
+    void anEventAlreadyAtTheCeilingOfAnOverrideIsNotOfferedEvenAsAnException() {
+        var atCeiling = event("2026-10-13T09:00", Modality.SEMI_PERSONALIZED, 4, 6);
+        var oneBelow = event("2026-10-13T10:00", Modality.SEMI_PERSONALIZED, 4, 5);
+        List<CoachSlot> slots = SlotCatalog.forCoach(Modality.SEMI_PERSONALIZED, 4, GRID, List.of(atCeiling, oneBelow), Set.of());
+        assertThat(slots).extracting(s -> s.range().start()).containsExactly(local("2026-10-13T08:00"), local("2026-10-13T10:00"), local("2026-10-13T11:00"));
+    }
 }

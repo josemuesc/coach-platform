@@ -475,4 +475,52 @@ class CalendarScreensTest extends SchedulingApiTest {
         assertThat(JsonPath.<List<?>>read(upcomingBlocks(a), "$")).isEmpty();
         studentBooks(ana, at(MON, "11:00")).andExpect(status().isCreated());            // A's calendar has no block
     }
+
+    // ================================================================= shared classes
+
+    @Test
+    void aRegisteredStudentCanJoinAPersonalizedClassAsAnExceptionAndEachOneUsesTheirOwnClass() throws Exception {
+        var coach = newCoach(8);
+        var ana = personalized(coach, "Ana");
+        var beto = personalized(coach, "Beto");
+        String event = eventId(studentBooked(ana, at("2026-10-06", "14:00")));
+        String betoPlace = attendanceId(coachBooks(coach, beto, at("2026-10-06", "14:00"), true, "Entreno compartido").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.override").value(true)).andReturn());
+
+        String w = week(coach, "2026-10-06");
+        assertThat(JsonPath.<List<Boolean>>read(w, "$.days[1].items[?(@.kind=='EVENT')].event.shared")).containsExactly(true);
+        assertThat(JsonPath.<List<String>>read(w, "$.days[1].items[?(@.kind=='EVENT')].event.modality")).containsExactly("PERSONALIZED");
+        assertThat(JsonPath.<List<Integer>>read(w, "$.days[1].items[?(@.kind=='EVENT')].event.capacity")).as("the class keeps its capacity").containsExactly(1);
+        assertThat(JsonPath.<List<Integer>>read(w, "$.days[1].items[?(@.kind=='EVENT')].event.occupied")).containsExactly(2);
+
+        goTo("2026-10-06", "14:30");
+        markEvent(coach, event, JsonPath.<String>read(studentSessions(ana), "$[0].id"), "ATTENDED", betoPlace, "ATTENDED").andExpect(status().isOk());
+        assertThat(classesUsed(coach, ana)).isEqualTo(1);
+        assertThat(classesUsed(coach, beto)).isEqualTo(1);
+    }
+
+    @Test
+    void aClassThatIsNotOverbookedIsNotMarkedShared() throws Exception {
+        var coach = newCoach(8);
+        studentBooked(semi(coach, "Ana"), TEN);
+        studentBooked(semi(coach, "Beto"), TEN);
+        assertThat(JsonPath.<List<Boolean>>read(week(coach, MON), "$.days[0].items[?(@.kind=='EVENT')].event.shared")).containsExactly(false);
+    }
+
+    @Test
+    void theCeilingIsCapacityPlusTwoAndTheOptionsStopOfferingTheFullClass() throws Exception {
+        var coach = newCoach(8);
+        var a = personalized(coach, "A");
+        var b = personalized(coach, "B");
+        var c = personalized(coach, "C");
+        var d = personalized(coach, "D");
+        studentBooked(a, TEN);
+        coachBooks(coach, b, TEN, true, "Entreno compartido").andExpect(status().isCreated());
+        assertThat(JsonPath.<List<String>>read(options(coach, c, MON), "$.slots[?(@.localTime=='10:00')].blockedBy")).containsExactly("SLOT_TAKEN");
+        coachBooks(coach, c, TEN, true, "Entreno compartido").andExpect(status().isCreated());              // 3 = capacity 1 + 2: the limit
+        assertThat(JsonPath.<List<?>>read(options(coach, d, MON), "$.slots[?(@.localTime=='10:00')]")).isEmpty();
+        coachBooks(coach, d, TEN, true, "Entreno compartido").andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("SHARED_LIMIT_EXCEEDED"));
+        studentBooks(d, TEN).andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("SLOT_TAKEN"));   // a student still gets the plain rule
+        assertThat(JsonPath.<List<?>>read(studentSessions(d), "$")).isEmpty();
+    }
 }
